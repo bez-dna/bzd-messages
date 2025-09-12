@@ -7,3 +7,12 @@ pub enum Topics {
     Title,
     UserId,
 }
+
+#[derive(DeriveIden)]
+pub enum Messages {
+    Table,
+    MessageId,
+    Text,
+    UserId,
+    Code,
+}

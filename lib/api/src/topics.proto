@@ -12,13 +12,7 @@ message CreateTopicRequest {
 }
 
 message CreateTopicResponse {
-    optional Topic topic = 501;
-
-    message Topic {
-        optional string topic_id = 101;
-        optional string title = 102;
-        optional string user_id = 103;
-    }
+    optional string topic_id = 101;
 }
 
 message GetTopicsRequest {

@@ -1,4 +1,17 @@
 syntax = "proto3";
 package bzd.messages.messages;
 
-service MessagesService {}
+service MessagesService {
+    rpc CreateMessage(CreateMessageRequest) returns (CreateMessageResponse);
+}
+
+message CreateMessageRequest {
+    optional string text = 101;
+    optional string message_id = 102;
+    optional string user_id = 103;
+    optional string code = 104;
+}
+
+message CreateMessageResponse {
+    optional string message_id = 101;
+}
