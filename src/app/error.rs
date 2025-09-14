@@ -19,6 +19,10 @@ pub enum AppError {
     Db(#[from] sea_orm::DbErr),
     #[error("UUID")]
     Uuid(#[from] uuid::Error),
+    #[error("NOT_FOUND")]
+    NotFound,
     #[error("OTHER")]
     Other,
+    #[error("UNREACHABLE")]
+    Unreachable,
 }

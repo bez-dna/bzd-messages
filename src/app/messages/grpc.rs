@@ -54,6 +54,7 @@ mod create_message {
                 user_id: Uuid::parse_str(req.user_id())?,
                 text: req.text().into(),
                 code: req.code().into(),
+                message_id: req.message_id.as_deref().map(Uuid::parse_str).transpose()?,
             };
 
             data.validate()?;
