@@ -37,13 +37,15 @@ async fn create_message(
 }
 
 mod create_message {
-    use bzd_messages_api::{CreateMessageRequest, CreateMessageResponse};
+    use bzd_messages_api::{
+        CreateMessageRequest, CreateMessageResponse, create_message_request::Tp,
+    };
     use uuid::Uuid;
     use validator::Validate as _;
 
     use crate::app::{
         error::AppError,
-        messages::service::create_message::{Request, Response},
+        messages::service::create_message::{Request, Response, Type},
     };
 
     impl TryFrom<CreateMessageRequest> for Request {
@@ -54,7 +56,16 @@ mod create_message {
                 user_id: Uuid::parse_str(req.user_id())?,
                 text: req.text().into(),
                 code: req.code().into(),
-                message_id: req.message_id.as_deref().map(Uuid::parse_str).transpose()?,
+                tp: match req.tp.ok_or(AppError::Other)? {
+                    Tp::Starting(starting) => Type::TopicIds(
+                        starting
+                            .topic_ids
+                            .iter()
+                            .map(|it| Uuid::parse_str(&it))
+                            .collect::<Result<Vec<Uuid>, uuid::Error>>()?,
+                    ),
+                    Tp::Regular(regular) => Type::MessageId(Uuid::parse_str(regular.message_id())?),
+                },
             };
 
             data.validate()?;
