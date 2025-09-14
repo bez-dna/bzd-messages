@@ -8,6 +8,7 @@ use crate::app::settings::AppSettings;
 use crate::app::state::AppState;
 
 mod error;
+mod messages;
 mod settings;
 mod state;
 mod topics;
@@ -36,6 +37,7 @@ async fn http_and_grpc(state: &AppState) -> Result<(), Error> {
         .add_service(reflection_service)
         .add_service(health_service)
         .add_service(topics::topics_service(state.clone()))
+        .add_service(messages::messages_service(state.clone()))
         .into_axum_router();
 
     let listener = tokio::net::TcpListener::bind(&state.settings.http.endpoint).await?;

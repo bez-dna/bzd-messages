@@ -72,8 +72,10 @@ mod create_topic {
     }
 
     impl From<Response> for CreateTopicResponse {
-        fn from(_: Response) -> Self {
-            Self::default()
+        fn from(res: Response) -> Self {
+            Self {
+                topic_id: Some(res.topic.topic_id.into()),
+            }
         }
     }
 }
