@@ -7,9 +7,20 @@ service MessagesService {
 
 message CreateMessageRequest {
     optional string text = 101;
-    optional string message_id = 102;
-    optional string user_id = 103;
-    optional string code = 104;
+    optional string user_id = 102;
+    optional string code = 103;
+    oneof tp {
+        Starting starting = 104;
+        Regular regular = 105;
+    }
+
+    message Starting {
+        repeated string topic_ids = 101;
+    }
+
+    message Regular {
+        optional string message_id = 101;
+    }
 }
 
 message CreateMessageResponse {

@@ -11,8 +11,24 @@ pub async fn create_message(
     let message = repo::message::Model::new(req.user_id, req.text, req.code);
     let message = repo::create_message(&tx, message).await?;
 
-    let stream = match req.message_id {
-        Some(message_id) => {
+    match req.tp {
+        create_message::Type::TopicIds(topic_ids) => {
+            let topics =
+                repo::get_topics_by_ids_and_user_id(&tx, topic_ids.clone(), req.user_id).await?;
+
+            if topics.len() < 1 || topics.len() != topic_ids.len() {
+                return Err(AppError::Other);
+            }
+
+            for topic_id in topic_ids {
+                repo::create_message_topic(
+                    &tx,
+                    repo::message_topic::Model::new(message.message_id, topic_id),
+                )
+                .await?;
+            }
+        }
+        create_message::Type::MessageId(message_id) => {
             let source_message = repo::get_message_by_id(&tx, message_id)
                 .await?
                 .ok_or(AppError::NotFound)?;
@@ -47,15 +63,12 @@ pub async fn create_message(
                 repo::stream_user::Model::new(stream.stream_id, source_message.user_id),
             )
             .await?;
-
-            Some(stream)
         }
-        None => None,
     };
 
     tx.commit().await?;
 
-    Ok(create_message::Response { message, stream })
+    Ok(create_message::Response { message })
 }
 
 pub mod create_message {
@@ -71,11 +84,17 @@ pub mod create_message {
         pub text: String,
         #[validate(length(min = 2))]
         pub code: String,
-        pub message_id: Option<Uuid>,
+        pub tp: Type,
+        // pub message_id: Option<Uuid>,
+    }
+
+    pub enum Type {
+        TopicIds(Vec<Uuid>),
+        MessageId(Uuid),
     }
 
     pub struct Response {
         pub message: repo::message::Model,
-        pub stream: Option<repo::stream::Model>,
+        // pub stream: Option<repo::stream::Model>,
     }
 }

@@ -11,6 +11,7 @@ pub mod message_stream;
 pub mod message_topic;
 pub mod stream;
 pub mod stream_user;
+pub mod topic;
 
 pub async fn create_message<T: ConnectionTrait>(
     db: &T,
@@ -76,5 +77,29 @@ pub async fn create_stream_user<T: ConnectionTrait>(
         .exec(db)
         .await?;
 
+    Ok(())
+}
+
+pub async fn get_topics_by_ids_and_user_id<T: ConnectionTrait>(
+    db: &T,
+    topic_ids: Vec<Uuid>,
+    user_id: Uuid,
+) -> Result<Vec<topic::Model>, AppError> {
+    let topics = topic::Entity::find()
+        .filter(topic::Column::UserId.eq(user_id))
+        .filter(topic::Column::TopicId.is_in(topic_ids))
+        .all(db)
+        .await?;
+
+    Ok(topics)
+}
+
+pub async fn create_message_topic<T: ConnectionTrait>(
+    db: &T,
+    model: message_topic::Model,
+) -> Result<(), AppError> {
+    message_topic::Entity::insert(model.into_active_model())
+        .exec(db)
+        .await?;
     Ok(())
 }
