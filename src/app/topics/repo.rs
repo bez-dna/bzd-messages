@@ -28,3 +28,12 @@ pub async fn get_topics_by_user_id<T: ConnectionTrait>(
 
     Ok(topics)
 }
+
+pub async fn get_topic_by_id<T: ConnectionTrait>(
+    db: &T,
+    topic_id: Uuid,
+) -> Result<Option<topic::Model>, AppError> {
+    let topic = topic::Entity::find_by_id(topic_id).one(db).await?;
+
+    Ok(topic)
+}

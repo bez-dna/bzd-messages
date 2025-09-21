@@ -4,6 +4,7 @@ package bzd.messages.topics;
 service TopicsService {
     rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse);
     rpc GetTopics(GetTopicsRequest) returns (GetTopicsResponse);
+    rpc GetTopic(GetTopicRequest) returns (GetTopicResponse);
 }
 
 message CreateTopicRequest {
@@ -21,6 +22,21 @@ message GetTopicsRequest {
 
 message GetTopicsResponse {
     repeated Topic topics = 501;
+
+    message Topic {
+        optional string topic_id = 101;
+        optional string title = 102;
+        optional string user_id = 103;
+    }
+}
+
+message GetTopicRequest {
+    optional string topic_id = 101;
+    optional string user_id = 102;
+}
+
+message GetTopicResponse {
+    optional Topic topic = 501;
 
     message Topic {
         optional string topic_id = 101;

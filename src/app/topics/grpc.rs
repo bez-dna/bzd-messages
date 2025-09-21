@@ -1,6 +1,6 @@
 use bzd_messages_api::{
-    CreateTopicRequest, CreateTopicResponse, GetTopicsRequest, GetTopicsResponse,
-    topics_service_server::TopicsService,
+    CreateTopicRequest, CreateTopicResponse, GetTopicRequest, GetTopicResponse, GetTopicsRequest,
+    GetTopicsResponse, topics_service_server::TopicsService,
 };
 use tonic::{Request, Response, Status};
 
@@ -32,6 +32,15 @@ impl TopicsService for GrpcTopicsService {
         req: Request<GetTopicsRequest>,
     ) -> Result<Response<GetTopicsResponse>, Status> {
         let res = get_topics(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(res))
+    }
+
+    async fn get_topic(
+        &self,
+        req: Request<GetTopicRequest>,
+    ) -> Result<Response<GetTopicResponse>, Status> {
+        let res = get_topic(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -125,6 +134,47 @@ mod get_topics {
                 topic_id: Some(topic.topic_id.into()),
                 title: Some(topic.title.into()),
                 user_id: Some(topic.user_id.into()),
+            }
+        }
+    }
+}
+
+async fn get_topic(
+    AppState { db, .. }: &AppState,
+    req: GetTopicRequest,
+) -> Result<GetTopicResponse, AppError> {
+    let res = service::get_topic(db, req.try_into()?).await?;
+
+    Ok(res.into())
+}
+
+mod get_topic {
+    use bzd_messages_api::{GetTopicRequest, GetTopicResponse, get_topic_response::Topic};
+    use uuid::Uuid;
+
+    use crate::app::{error::AppError, topics::service::get_topic};
+
+    impl TryFrom<GetTopicRequest> for get_topic::Request {
+        type Error = AppError;
+
+        fn try_from(req: GetTopicRequest) -> Result<Self, Self::Error> {
+            let data = Self {
+                topic_id: Uuid::parse_str(req.topic_id())?,
+                user_id: Uuid::parse_str(req.user_id())?,
+            };
+
+            Ok(data)
+        }
+    }
+
+    impl From<get_topic::Response> for GetTopicResponse {
+        fn from(res: get_topic::Response) -> Self {
+            Self {
+                topic: Some(Topic {
+                    topic_id: Some(res.topic.topic_id.into()),
+                    title: Some(res.topic.topic_id.into()),
+                    user_id: Some(res.topic.user_id.into()),
+                }),
             }
         }
     }
