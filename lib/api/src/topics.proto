@@ -5,6 +5,9 @@ service TopicsService {
     rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse);
     rpc GetTopics(GetTopicsRequest) returns (GetTopicsResponse);
     rpc GetTopic(GetTopicRequest) returns (GetTopicResponse);
+    rpc GetTopicsUsers(GetTopicsUsersRequest) returns (GetTopicsUsersResponse);
+    rpc CreateTopicUser(CreateTopicUserRequest)
+        returns (CreateTopicUserResponse);
 }
 
 message CreateTopicRequest {
@@ -43,4 +46,26 @@ message GetTopicResponse {
         optional string title = 102;
         optional string user_id = 103;
     }
+}
+
+message GetTopicsUsersRequest {
+    repeated string topic_ids = 101;
+    optional string user_id = 102;
+}
+
+message GetTopicsUsersResponse {
+    repeated TopicUser topics_users = 501;
+
+    message TopicUser {
+        optional string topic_user_id = 101;
+    }
+}
+
+message CreateTopicUserRequest {
+    optional string topic_id = 101;
+    optional string user_id = 102;
+}
+
+message CreateTopicUserResponse {
+    optional string topic_user_id = 101;
 }

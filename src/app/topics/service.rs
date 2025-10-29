@@ -81,3 +81,65 @@ pub mod get_topic {
         pub topic: repo::topic::Model,
     }
 }
+
+pub async fn get_topics_users(
+    db: &DbConn,
+    req: get_topics_users::Request,
+) -> Result<get_topics_users::Response, AppError> {
+    let topics_users =
+        repo::get_topics_users_by_ids_and_user_id(db, req.topic_ids, req.user_id).await?;
+
+    Ok(get_topics_users::Response { topics_users })
+}
+
+pub mod get_topics_users {
+    use uuid::Uuid;
+
+    use crate::app::topics::repo::topic_user;
+
+    pub struct Request {
+        pub topic_ids: Vec<Uuid>,
+        pub user_id: Uuid,
+    }
+
+    pub struct Response {
+        pub topics_users: Vec<topic_user::Model>,
+    }
+}
+
+pub async fn create_topic_user(
+    db: &DbConn,
+    req: create_topic_user::Request,
+) -> Result<create_topic_user::Response, AppError> {
+    let topic = repo::get_topic_by_id(db, req.topic_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if topic.user_id == req.user_id {
+        return Err(AppError::NotFound);
+    };
+
+    let topic_user = repo::create_topic_user(
+        db,
+        repo::topic_user::Model::new(req.user_id, topic.topic_id),
+    )
+    .await?
+    .ok_or(AppError::Unreachable)?;
+
+    Ok(create_topic_user::Response { topic_user })
+}
+
+pub mod create_topic_user {
+    use uuid::Uuid;
+
+    use crate::app::topics::repo;
+
+    pub struct Request {
+        pub topic_id: Uuid,
+        pub user_id: Uuid,
+    }
+
+    pub struct Response {
+        pub topic_user: repo::topic_user::Model,
+    }
+}

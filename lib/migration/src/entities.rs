@@ -9,6 +9,14 @@ pub enum Topics {
 }
 
 #[derive(DeriveIden)]
+pub enum TopicsUsers {
+    Table,
+    TopicUserId,
+    UserId,
+    TopicId,
+}
+
+#[derive(DeriveIden)]
 pub enum Messages {
     Table,
     MessageId,

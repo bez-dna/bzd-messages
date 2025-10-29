@@ -8,6 +8,7 @@ mod m20250914_122002_create_streams;
 mod m20250914_122217_create_messages_streams;
 mod m20250914_122535_create_streams_users;
 mod m20250914_122723_create_messages_topics;
+mod m20251027_072804_create_topics_users;
 
 pub struct Migrator;
 
@@ -21,6 +22,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20250914_122217_create_messages_streams::Migration),
             Box::new(m20250914_122535_create_streams_users::Migration),
             Box::new(m20250914_122723_create_messages_topics::Migration),
+            Box::new(m20251027_072804_create_topics_users::Migration),
         ]
     }
 }
