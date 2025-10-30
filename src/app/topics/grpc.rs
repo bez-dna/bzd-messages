@@ -251,6 +251,8 @@ mod get_topics_users {
         fn from(topic_user: &repo::topic_user::Model) -> Self {
             Self {
                 topic_user_id: Some(topic_user.topic_user_id.into()),
+                topic_id: Some(topic_user.topic_id.into()),
+                user_id: Some(topic_user.user_id.into()),
             }
         }
     }
@@ -288,8 +290,6 @@ mod create_topic_user {
         fn from(res: Response) -> Self {
             Self {
                 topic_user_id: Some(res.topic_user.topic_user_id.into()),
-                topic_id: Some(res.topic_user.topic_id.into()),
-                user_id: Some(res.topic_user.user_id.into()),
             }
         }
     }
