@@ -68,4 +68,6 @@ message CreateTopicUserRequest {
 
 message CreateTopicUserResponse {
     optional string topic_user_id = 101;
+    optional string topic_id = 102;
+    optional string user_id = 103;
 }
