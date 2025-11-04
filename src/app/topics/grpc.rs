@@ -155,7 +155,7 @@ mod get_topics {
         fn from(topic: repo::topic::Model) -> Self {
             Self {
                 topic_id: Some(topic.topic_id.into()),
-                title: Some(topic.title.into()),
+                title: topic.title.into(),
                 user_id: Some(topic.user_id.into()),
             }
         }
@@ -195,7 +195,7 @@ mod get_topic {
             Self {
                 topic: Some(Topic {
                     topic_id: Some(res.topic.topic_id.into()),
-                    title: Some(res.topic.topic_id.into()),
+                    title: res.topic.title.into(),
                     user_id: Some(res.topic.user_id.into()),
                 }),
             }
