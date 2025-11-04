@@ -20,7 +20,7 @@ message CreateTopicResponse {
 }
 
 message GetTopicsRequest {
-    optional string user_id = 101;
+    repeated string user_ids = 101;
 }
 
 message GetTopicsResponse {

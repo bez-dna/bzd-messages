@@ -33,7 +33,7 @@ pub async fn get_topics(
     db: &DbConn,
     req: get_topics::Request,
 ) -> Result<get_topics::Response, AppError> {
-    let topics = repo::get_topics_by_user_id(db, req.user_id).await?;
+    let topics = repo::get_topics_by_user_ids(db, req.user_ids).await?;
 
     Ok(get_topics::Response { topics })
 }
@@ -44,7 +44,7 @@ pub mod get_topics {
     use crate::app::topics::repo;
 
     pub struct Request {
-        pub user_id: Uuid,
+        pub user_ids: Vec<Uuid>,
     }
 
     pub struct Response {

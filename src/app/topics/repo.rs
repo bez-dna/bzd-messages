@@ -18,12 +18,12 @@ pub async fn create_topic<T: ConnectionTrait>(
     Ok(topic)
 }
 
-pub async fn get_topics_by_user_id<T: ConnectionTrait>(
+pub async fn get_topics_by_user_ids<T: ConnectionTrait>(
     db: &T,
-    user_id: Uuid,
+    user_ids: Vec<Uuid>,
 ) -> Result<Vec<topic::Model>, AppError> {
     let topics = topic::Entity::find()
-        .filter(topic::Column::UserId.eq(user_id))
+        .filter(topic::Column::UserId.is_in(user_ids))
         .all(db)
         .await?;
 

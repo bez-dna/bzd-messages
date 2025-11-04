@@ -133,9 +133,13 @@ mod get_topics {
         type Error = AppError;
 
         fn try_from(req: GetTopicsRequest) -> Result<Self, Self::Error> {
-            Ok(Self {
-                user_id: Uuid::parse_str(req.user_id())?,
-            })
+            let user_ids = req
+                .user_ids
+                .iter()
+                .map(|it| it.parse())
+                .collect::<Result<Vec<Uuid>, _>>()?;
+
+            Ok(Self { user_ids })
         }
     }
 
