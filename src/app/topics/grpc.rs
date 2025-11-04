@@ -1,7 +1,8 @@
 use bzd_messages_api::{
     CreateTopicRequest, CreateTopicResponse, CreateTopicUserRequest, CreateTopicUserResponse,
-    GetTopicRequest, GetTopicResponse, GetTopicsRequest, GetTopicsResponse, GetTopicsUsersRequest,
-    GetTopicsUsersResponse, topics_service_server::TopicsService,
+    DeleteTopicUserRequest, DeleteTopicUserResponse, GetTopicRequest, GetTopicResponse,
+    GetTopicsRequest, GetTopicsResponse, GetTopicsUsersRequest, GetTopicsUsersResponse,
+    topics_service_server::TopicsService,
 };
 use tonic::{Request, Response, Status};
 
@@ -62,6 +63,15 @@ impl TopicsService for GrpcTopicsService {
         let res = create_topic_user(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
+    }
+
+    async fn delete_topic_user(
+        &self,
+        req: Request<DeleteTopicUserRequest>,
+    ) -> Result<Response<DeleteTopicUserResponse>, Status> {
+        delete_topic_user(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(DeleteTopicUserResponse::default()))
     }
 }
 
@@ -133,9 +143,13 @@ mod get_topics {
         type Error = AppError;
 
         fn try_from(req: GetTopicsRequest) -> Result<Self, Self::Error> {
-            Ok(Self {
-                user_id: Uuid::parse_str(req.user_id())?,
-            })
+            let user_ids = req
+                .user_ids
+                .iter()
+                .map(|it| it.parse())
+                .collect::<Result<Vec<Uuid>, _>>()?;
+
+            Ok(Self { user_ids })
         }
     }
 
@@ -151,7 +165,7 @@ mod get_topics {
         fn from(topic: repo::topic::Model) -> Self {
             Self {
                 topic_id: Some(topic.topic_id.into()),
-                title: Some(topic.title.into()),
+                title: topic.title.into(),
                 user_id: Some(topic.user_id.into()),
             }
         }
@@ -191,7 +205,7 @@ mod get_topic {
             Self {
                 topic: Some(Topic {
                     topic_id: Some(res.topic.topic_id.into()),
-                    title: Some(res.topic.topic_id.into()),
+                    title: res.topic.title.into(),
                     user_id: Some(res.topic.user_id.into()),
                 }),
             }
@@ -291,6 +305,32 @@ mod create_topic_user {
             Self {
                 topic_user_id: Some(res.topic_user.topic_user_id.into()),
             }
+        }
+    }
+}
+
+async fn delete_topic_user(
+    AppState { db, .. }: &AppState,
+    req: DeleteTopicUserRequest,
+) -> Result<(), AppError> {
+    service::delete_topic_user(db, req.try_into()?).await?;
+
+    Ok(())
+}
+
+mod delete_topic_user {
+    use bzd_messages_api::DeleteTopicUserRequest;
+
+    use crate::app::{error::AppError, topics::service::delete_topic_user::Request};
+
+    impl TryFrom<DeleteTopicUserRequest> for Request {
+        type Error = AppError;
+
+        fn try_from(req: DeleteTopicUserRequest) -> Result<Self, Self::Error> {
+            Ok(Self {
+                topic_user_id: req.topic_user_id().parse()?,
+                user_id: req.user_id().parse()?,
+            })
         }
     }
 }

@@ -33,7 +33,7 @@ pub async fn get_topics(
     db: &DbConn,
     req: get_topics::Request,
 ) -> Result<get_topics::Response, AppError> {
-    let topics = repo::get_topics_by_user_id(db, req.user_id).await?;
+    let topics = repo::get_topics_by_user_ids(db, req.user_ids).await?;
 
     Ok(get_topics::Response { topics })
 }
@@ -44,7 +44,7 @@ pub mod get_topics {
     use crate::app::topics::repo;
 
     pub struct Request {
-        pub user_id: Uuid,
+        pub user_ids: Vec<Uuid>,
     }
 
     pub struct Response {
@@ -141,5 +141,29 @@ pub mod create_topic_user {
 
     pub struct Response {
         pub topic_user: repo::topic_user::Model,
+    }
+}
+
+pub async fn delete_topic_user(
+    db: &DbConn,
+    req: delete_topic_user::Request,
+) -> Result<(), AppError> {
+    let topic_user = repo::get_topic_user_by_id(db, req.topic_user_id).await?;
+
+    if topic_user.user_id != req.user_id {
+        return Err(AppError::NotFound);
+    }
+
+    repo::delete_topic_user(db, topic_user).await?;
+
+    Ok(())
+}
+
+pub mod delete_topic_user {
+    use uuid::Uuid;
+
+    pub struct Request {
+        pub topic_user_id: Uuid,
+        pub user_id: Uuid,
     }
 }
