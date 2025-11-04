@@ -1,7 +1,8 @@
 use bzd_messages_api::{
     CreateTopicRequest, CreateTopicResponse, CreateTopicUserRequest, CreateTopicUserResponse,
-    GetTopicRequest, GetTopicResponse, GetTopicsRequest, GetTopicsResponse, GetTopicsUsersRequest,
-    GetTopicsUsersResponse, topics_service_server::TopicsService,
+    DeleteTopicUserRequest, DeleteTopicUserResponse, GetTopicRequest, GetTopicResponse,
+    GetTopicsRequest, GetTopicsResponse, GetTopicsUsersRequest, GetTopicsUsersResponse,
+    topics_service_server::TopicsService,
 };
 use tonic::{Request, Response, Status};
 
@@ -62,6 +63,15 @@ impl TopicsService for GrpcTopicsService {
         let res = create_topic_user(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
+    }
+
+    async fn delete_topic_user(
+        &self,
+        req: Request<DeleteTopicUserRequest>,
+    ) -> Result<Response<DeleteTopicUserResponse>, Status> {
+        delete_topic_user(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(DeleteTopicUserResponse::default()))
     }
 }
 
@@ -295,6 +305,31 @@ mod create_topic_user {
             Self {
                 topic_user_id: Some(res.topic_user.topic_user_id.into()),
             }
+        }
+    }
+}
+
+async fn delete_topic_user(
+    AppState { db, .. }: &AppState,
+    req: DeleteTopicUserRequest,
+) -> Result<(), AppError> {
+    service::delete_topic_user(db, req.try_into()?).await?;
+
+    Ok(())
+}
+
+mod delete_topic_user {
+    use bzd_messages_api::DeleteTopicUserRequest;
+
+    use crate::app::{error::AppError, topics::service::delete_topic_user::Request};
+
+    impl TryFrom<DeleteTopicUserRequest> for Request {
+        type Error = AppError;
+
+        fn try_from(req: DeleteTopicUserRequest) -> Result<Self, Self::Error> {
+            Ok(Self {
+                topic_user_id: req.topic_user_id().parse()?,
+            })
         }
     }
 }

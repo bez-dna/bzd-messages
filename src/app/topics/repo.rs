@@ -75,3 +75,14 @@ pub async fn create_topic_user<T: ConnectionTrait>(
 
     Ok(topic_user)
 }
+
+pub async fn delete_topic_user<T: ConnectionTrait>(
+    db: &T,
+    topic_user_id: Uuid,
+) -> Result<(), AppError> {
+    topic_user::Entity::delete_by_id(topic_user_id)
+        .exec(db)
+        .await?;
+
+    Ok(())
+}

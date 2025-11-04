@@ -143,3 +143,20 @@ pub mod create_topic_user {
         pub topic_user: repo::topic_user::Model,
     }
 }
+
+pub async fn delete_topic_user(
+    db: &DbConn,
+    req: delete_topic_user::Request,
+) -> Result<(), AppError> {
+    repo::delete_topic_user(db, req.topic_user_id).await?;
+
+    Ok(())
+}
+
+pub mod delete_topic_user {
+    use uuid::Uuid;
+
+    pub struct Request {
+        pub topic_user_id: Uuid,
+    }
+}

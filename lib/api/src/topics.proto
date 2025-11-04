@@ -8,6 +8,8 @@ service TopicsService {
     rpc GetTopicsUsers(GetTopicsUsersRequest) returns (GetTopicsUsersResponse);
     rpc CreateTopicUser(CreateTopicUserRequest)
         returns (CreateTopicUserResponse);
+    rpc DeleteTopicUser(DeleteTopicUserRequest)
+        returns (DeleteTopicUserResponse);
 }
 
 message CreateTopicRequest {
@@ -71,3 +73,9 @@ message CreateTopicUserRequest {
 message CreateTopicUserResponse {
     optional string topic_user_id = 101;
 }
+
+message DeleteTopicUserRequest {
+    optional string topic_user_id = 101;
+}
+
+message DeleteTopicUserResponse {}
