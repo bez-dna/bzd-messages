@@ -1,6 +1,6 @@
 use sea_orm::{
     ActiveModelTrait, ColumnTrait as _, ConnectionTrait, EntityTrait as _, IntoActiveModel as _,
-    QueryFilter as _, sea_query::OnConflict,
+    ModelTrait, QueryFilter as _, sea_query::OnConflict,
 };
 use uuid::Uuid;
 
@@ -53,6 +53,18 @@ pub async fn get_topic_by_id<T: ConnectionTrait>(
     Ok(topic)
 }
 
+pub async fn get_topic_user_by_id<T: ConnectionTrait>(
+    db: &T,
+    topic_user_id: Uuid,
+) -> Result<topic_user::Model, AppError> {
+    let topic_user = topic_user::Entity::find_by_id(topic_user_id)
+        .one(db)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    Ok(topic_user)
+}
+
 pub async fn create_topic_user<T: ConnectionTrait>(
     db: &T,
     model: topic_user::Model,
@@ -78,11 +90,9 @@ pub async fn create_topic_user<T: ConnectionTrait>(
 
 pub async fn delete_topic_user<T: ConnectionTrait>(
     db: &T,
-    topic_user_id: Uuid,
+    topic_user: topic_user::Model,
 ) -> Result<(), AppError> {
-    topic_user::Entity::delete_by_id(topic_user_id)
-        .exec(db)
-        .await?;
+    topic_user.delete(db).await?;
 
     Ok(())
 }

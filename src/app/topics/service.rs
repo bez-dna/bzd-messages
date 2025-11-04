@@ -148,7 +148,13 @@ pub async fn delete_topic_user(
     db: &DbConn,
     req: delete_topic_user::Request,
 ) -> Result<(), AppError> {
-    repo::delete_topic_user(db, req.topic_user_id).await?;
+    let topic_user = repo::get_topic_user_by_id(db, req.topic_user_id).await?;
+
+    if topic_user.user_id != req.user_id {
+        return Err(AppError::NotFound);
+    }
+
+    repo::delete_topic_user(db, topic_user).await?;
 
     Ok(())
 }
@@ -158,5 +164,6 @@ pub mod delete_topic_user {
 
     pub struct Request {
         pub topic_user_id: Uuid,
+        pub user_id: Uuid,
     }
 }

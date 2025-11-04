@@ -329,6 +329,7 @@ mod delete_topic_user {
         fn try_from(req: DeleteTopicUserRequest) -> Result<Self, Self::Error> {
             Ok(Self {
                 topic_user_id: req.topic_user_id().parse()?,
+                user_id: req.user_id().parse()?,
             })
         }
     }
