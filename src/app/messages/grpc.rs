@@ -1,6 +1,6 @@
 use bzd_messages_api::{
-    CreateMessageRequest, CreateMessageResponse, GetUserMessagesRequest, GetUserMessagesResponse,
-    messages_service_server::MessagesService,
+    CreateMessageRequest, CreateMessageResponse, GetMessagesRequest, GetMessagesResponse,
+    GetUserMessagesRequest, GetUserMessagesResponse, messages_service_server::MessagesService,
 };
 use tonic::{Request, Response, Status};
 
@@ -32,6 +32,15 @@ impl MessagesService for GrpcMessagesService {
         req: Request<GetUserMessagesRequest>,
     ) -> Result<Response<GetUserMessagesResponse>, Status> {
         let res = get_user_messages(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(res))
+    }
+
+    async fn get_messages(
+        &self,
+        req: Request<GetMessagesRequest>,
+    ) -> Result<Response<GetMessagesResponse>, Status> {
+        let res = get_messages(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -124,6 +133,61 @@ mod get_user_messages {
         fn from(res: Response) -> Self {
             Self {
                 message_ids: res.messages.iter().map(|it| it.message_id.into()).collect(),
+            }
+        }
+    }
+}
+
+async fn get_messages(
+    AppState { db, .. }: &AppState,
+    req: GetMessagesRequest,
+) -> Result<GetMessagesResponse, AppError> {
+    let res = service::get_messages(db, req.try_into()?).await?;
+
+    Ok(res.into())
+}
+
+mod get_messages {
+    use bzd_messages_api::{GetMessagesRequest, GetMessagesResponse, get_messages_response};
+    use uuid::Uuid;
+
+    use crate::app::{
+        error::AppError,
+        messages::{
+            repo::message,
+            service::get_messages::{Request, Response},
+        },
+    };
+
+    impl TryFrom<GetMessagesRequest> for Request {
+        type Error = AppError;
+
+        fn try_from(req: GetMessagesRequest) -> Result<Self, Self::Error> {
+            let message_ids = req
+                .message_ids
+                .iter()
+                .map(|it| it.parse())
+                .collect::<Result<Vec<Uuid>, _>>()?;
+
+            Ok(Self { message_ids })
+        }
+    }
+
+    impl From<Response> for GetMessagesResponse {
+        fn from(res: Response) -> Self {
+            Self {
+                messages: res.messages.iter().map(Into::into).collect(),
+            }
+        }
+    }
+
+    impl From<&message::Model> for get_messages_response::Message {
+        fn from(message: &message::Model) -> Self {
+            Self {
+                message_id: Some(message.message_id.into()),
+                text: message.text.clone().into(),
+                user_id: Some(message.user_id.into()),
+                code: message.code.clone().into(),
             }
         }
     }

@@ -128,3 +128,26 @@ pub mod get_user_messages {
         pub messages: Vec<message::Model>,
     }
 }
+
+pub async fn get_messages(
+    db: &DbConn,
+    req: get_messages::Request,
+) -> Result<get_messages::Response, AppError> {
+    let messages = repo::get_messages_by_ids(db, req.message_ids).await?;
+
+    Ok(get_messages::Response { messages })
+}
+
+pub mod get_messages {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::message;
+
+    pub struct Request {
+        pub message_ids: Vec<Uuid>,
+    }
+
+    pub struct Response {
+        pub messages: Vec<message::Model>,
+    }
+}

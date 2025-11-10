@@ -31,6 +31,18 @@ pub async fn get_message_by_id<T: ConnectionTrait>(
     Ok(message)
 }
 
+pub async fn get_messages_by_ids<T: ConnectionTrait>(
+    db: &T,
+    message_ids: Vec<Uuid>,
+) -> Result<Vec<message::Model>, AppError> {
+    let messages = message::Entity::find()
+        .filter(message::Column::MessageId.is_in(message_ids))
+        .all(db)
+        .await?;
+
+    Ok(messages)
+}
+
 pub async fn create_stream<T: ConnectionTrait>(
     db: &T,
     model: stream::Model,

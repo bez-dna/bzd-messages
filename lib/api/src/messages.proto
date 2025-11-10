@@ -5,6 +5,7 @@ service MessagesService {
     rpc CreateMessage(CreateMessageRequest) returns (CreateMessageResponse);
     rpc GetUserMessages(GetUserMessagesRequest)
         returns (GetUserMessagesResponse);
+    rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
 }
 
 message CreateMessageRequest {
@@ -36,4 +37,19 @@ message GetUserMessagesRequest {
 
 message GetUserMessagesResponse {
     repeated string message_ids = 101;
+}
+
+message GetMessagesRequest {
+    repeated string message_ids = 101;
+}
+
+message GetMessagesResponse {
+    repeated Message messages = 501;
+
+    message Message {
+        optional string message_id = 101;
+        optional string text = 102;
+        optional string user_id = 103;
+        optional string code = 104;
+    }
 }
