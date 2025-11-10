@@ -1,10 +1,10 @@
 use sea_orm::{
     ActiveModelTrait as _, ColumnTrait as _, ConnectionTrait, EntityTrait as _,
-    IntoActiveModel as _, QueryFilter as _, sea_query::OnConflict,
+    IntoActiveModel as _, JoinType, QueryFilter as _, QuerySelect as _, sea_query::OnConflict,
 };
 use uuid::Uuid;
 
-use crate::app::error::AppError;
+use crate::app::{error::AppError, topics::repo::topic_user};
 
 pub mod message;
 pub mod message_stream;
@@ -102,4 +102,42 @@ pub async fn create_message_topic<T: ConnectionTrait>(
         .exec(db)
         .await?;
     Ok(())
+}
+
+pub async fn get_topics_by_user_id<T: ConnectionTrait>(
+    db: &T,
+    user_id: Uuid,
+) -> Result<Vec<topic::Model>, AppError> {
+    let topics = topic::Entity::find()
+        .join(
+            JoinType::InnerJoin,
+            topic::Entity::belongs_to(topic_user::Entity)
+                .to(topic_user::Column::TopicId)
+                .from(topic::Column::TopicId)
+                .into(),
+        )
+        .filter(topic_user::Column::UserId.eq(user_id))
+        .all(db)
+        .await?;
+
+    Ok(topics)
+}
+
+pub async fn get_messages_by_topic_ids<T: ConnectionTrait>(
+    db: &T,
+    topic_ids: Vec<Uuid>,
+) -> Result<Vec<message::Model>, AppError> {
+    let messages = message::Entity::find()
+        .join(
+            JoinType::InnerJoin,
+            message::Entity::belongs_to(message_topic::Entity)
+                .to(message_topic::Column::MessageId)
+                .from(message::Column::MessageId)
+                .into(),
+        )
+        .filter(message_topic::Column::TopicId.is_in(topic_ids))
+        .all(db)
+        .await?;
+
+    Ok(messages)
 }

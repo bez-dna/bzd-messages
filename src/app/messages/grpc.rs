@@ -1,5 +1,6 @@
 use bzd_messages_api::{
-    CreateMessageRequest, CreateMessageResponse, messages_service_server::MessagesService,
+    CreateMessageRequest, CreateMessageResponse, GetUserMessagesRequest, GetUserMessagesResponse,
+    messages_service_server::MessagesService,
 };
 use tonic::{Request, Response, Status};
 
@@ -22,6 +23,15 @@ impl MessagesService for GrpcMessagesService {
         req: Request<CreateMessageRequest>,
     ) -> Result<Response<CreateMessageResponse>, Status> {
         let res = create_message(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(res))
+    }
+
+    async fn get_user_messages(
+        &self,
+        req: Request<GetUserMessagesRequest>,
+    ) -> Result<Response<GetUserMessagesResponse>, Status> {
+        let res = get_user_messages(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -78,6 +88,42 @@ mod create_message {
         fn from(res: Response) -> Self {
             Self {
                 message_id: Some(res.message.message_id.into()),
+            }
+        }
+    }
+}
+
+async fn get_user_messages(
+    AppState { db, .. }: &AppState,
+    req: GetUserMessagesRequest,
+) -> Result<GetUserMessagesResponse, AppError> {
+    let res = service::get_user_messages(db, req.try_into()?).await?;
+
+    Ok(res.into())
+}
+
+mod get_user_messages {
+    use bzd_messages_api::{GetUserMessagesRequest, GetUserMessagesResponse};
+
+    use crate::app::{
+        error::AppError,
+        messages::service::get_user_messages::{Request, Response},
+    };
+
+    impl TryFrom<GetUserMessagesRequest> for Request {
+        type Error = AppError;
+
+        fn try_from(req: GetUserMessagesRequest) -> Result<Self, Self::Error> {
+            Ok(Self {
+                user_id: req.user_id().parse()?,
+            })
+        }
+    }
+
+    impl From<Response> for GetUserMessagesResponse {
+        fn from(res: Response) -> Self {
+            Self {
+                message_ids: res.messages.iter().map(|it| it.message_id.into()).collect(),
             }
         }
     }

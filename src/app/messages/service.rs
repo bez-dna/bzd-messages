@@ -1,4 +1,5 @@
 use sea_orm::{DbConn, TransactionTrait as _};
+use uuid::Uuid;
 
 use crate::app::{error::AppError, messages::repo};
 
@@ -75,7 +76,7 @@ pub mod create_message {
     use uuid::Uuid;
     use validator::Validate;
 
-    use crate::app::messages::repo;
+    use crate::app::messages::repo::message;
 
     #[derive(Validate)]
     pub struct Request {
@@ -94,7 +95,36 @@ pub mod create_message {
     }
 
     pub struct Response {
-        pub message: repo::message::Model,
+        pub message: message::Model,
         // pub stream: Option<repo::stream::Model>,
+    }
+}
+
+pub async fn get_user_messages(
+    db: &DbConn,
+    req: get_user_messages::Request,
+) -> Result<get_user_messages::Response, AppError> {
+    let topic_ids: Vec<Uuid> = repo::get_topics_by_user_id(db, req.user_id)
+        .await?
+        .iter()
+        .map(|it| it.topic_id)
+        .collect();
+
+    let messages = repo::get_messages_by_topic_ids(db, topic_ids).await?;
+
+    Ok(get_user_messages::Response { messages })
+}
+
+pub mod get_user_messages {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::message;
+
+    pub struct Request {
+        pub user_id: Uuid,
+    }
+
+    pub struct Response {
+        pub messages: Vec<message::Model>,
     }
 }

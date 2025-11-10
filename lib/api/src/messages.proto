@@ -3,6 +3,8 @@ package bzd.messages.messages;
 
 service MessagesService {
     rpc CreateMessage(CreateMessageRequest) returns (CreateMessageResponse);
+    rpc GetUserMessages(GetUserMessagesRequest)
+        returns (GetUserMessagesResponse);
 }
 
 message CreateMessageRequest {
@@ -25,4 +27,13 @@ message CreateMessageRequest {
 
 message CreateMessageResponse {
     optional string message_id = 101;
+}
+
+message GetUserMessagesRequest {
+    optional string user_id = 101;
+    optional string cursor_message_id = 102;
+}
+
+message GetUserMessagesResponse {
+    repeated string message_ids = 101;
 }
