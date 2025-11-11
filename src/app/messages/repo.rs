@@ -165,15 +165,14 @@ pub async fn get_messages_by_topic_ids<T: ConnectionTrait>(
     Ok(messages)
 }
 
-pub async fn get_stream_by_message_id<T: ConnectionTrait>(
+pub async fn find_stream_by_message_id<T: ConnectionTrait>(
     db: &T,
     message_id: Uuid,
-) -> Result<stream::Model, AppError> {
+) -> Result<Option<stream::Model>, AppError> {
     let stream = stream::Entity::find()
         .filter(stream::Column::MessageId.eq(message_id))
         .one(db)
-        .await?
-        .ok_or(AppError::NotFound)?;
+        .await?;
 
     Ok(stream)
 }

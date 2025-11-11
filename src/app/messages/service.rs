@@ -212,18 +212,23 @@ pub async fn get_message_messages(
     req: get_message_messages::Request,
     settings: &MessagesSettings,
 ) -> Result<get_message_messages::Response, AppError> {
-    // let message = repo::get_message_by_id(db, req.message_id).await?;
-    let stream = repo::get_stream_by_message_id(db, req.message_id).await?;
+    let message = repo::get_message_by_id(db, req.message_id).await?;
+    let stream = repo::find_stream_by_message_id(db, req.message_id).await?;
 
     let limit = settings.message_messages_limit;
 
-    let mut messages = repo::get_messages_by_stream_id(
-        db,
-        stream.stream_id,
-        req.cursor_message_id,
-        (limit + 1) as u64,
-    )
-    .await?;
+    let mut messages = match stream {
+        Some(stream) => {
+            repo::get_messages_by_stream_id(
+                db,
+                stream.stream_id,
+                req.cursor_message_id,
+                (limit + 1) as u64,
+            )
+            .await?
+        }
+        None => vec![message],
+    };
 
     let cursor_message = if messages.len() > limit as usize {
         Some(messages.remove(0))
