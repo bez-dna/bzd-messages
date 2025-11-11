@@ -1,7 +1,7 @@
 use sea_orm::{
     ActiveModelTrait as _, ColumnTrait as _, ConnectionTrait, EntityTrait as _,
     IntoActiveModel as _, JoinType, QueryFilter as _, QuerySelect as _, QueryTrait as _,
-    sea_query::OnConflict,
+    prelude::Expr, sea_query::OnConflict,
 };
 use uuid::Uuid;
 
@@ -163,4 +163,59 @@ pub async fn get_messages_by_topic_ids<T: ConnectionTrait>(
         .await?;
 
     Ok(messages)
+}
+
+pub async fn get_stream_by_message_id<T: ConnectionTrait>(
+    db: &T,
+    message_id: Uuid,
+) -> Result<stream::Model, AppError> {
+    let stream = stream::Entity::find()
+        .filter(stream::Column::MessageId.eq(message_id))
+        .one(db)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    Ok(stream)
+}
+
+pub async fn get_messages_by_stream_id<T: ConnectionTrait>(
+    db: &T,
+    stream_id: Uuid,
+    cursor_message_id: Option<Uuid>,
+    limit: u64,
+) -> Result<Vec<message::Model>, AppError> {
+    let messages = message::Entity::find()
+        .join(
+            JoinType::InnerJoin,
+            message::Entity::belongs_to(message_stream::Entity)
+                .to(message_stream::Column::MessageId)
+                .from(message::Column::MessageId)
+                .into(),
+        )
+        .filter(message_stream::Column::StreamId.eq(stream_id))
+        .apply_if(cursor_message_id, |query, v| {
+            query.filter(message::Column::MessageId.lte(v))
+        })
+        .cursor_by(message::Column::MessageId)
+        .last(limit)
+        .all(db)
+        .await?;
+
+    Ok(messages)
+}
+
+pub async fn increase_stream_messages_count<T: ConnectionTrait>(
+    db: &T,
+    stream_id: Uuid,
+) -> Result<(), AppError> {
+    stream::Entity::update_many()
+        .col_expr(
+            stream::Column::MessagesCount,
+            Expr::col(stream::Column::MessagesCount).add(1),
+        )
+        .filter(stream::Column::StreamId.eq(stream_id))
+        .exec(db)
+        .await?;
+
+    Ok(())
 }

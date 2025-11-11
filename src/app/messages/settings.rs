@@ -2,5 +2,6 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
 pub struct MessagesSettings {
-    pub limit: i64,
+    pub user_messages_limit: i64,
+    pub message_messages_limit: i64,
 }

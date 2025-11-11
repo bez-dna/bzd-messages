@@ -7,4 +7,5 @@ endpoint = "0.0.0.0:3000"
 endpoint = "postgres://postgres:postgres@0.0.0.0:5432/bzd_messages"
 
 [messages]
-limit = 5
+user_messages_limit = 5
+message_messages_limit = 5

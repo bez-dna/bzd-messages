@@ -15,7 +15,7 @@ pub async fn create_message(
     let message = repo::message::Model::new(req.user_id, req.text, req.code);
     let message = repo::create_message(&tx, message).await?;
 
-    match req.tp {
+    let stream = match req.tp {
         create_message::Type::TopicIds(topic_ids) => {
             let topics =
                 repo::get_topics_by_ids_and_user_id(&tx, topic_ids.clone(), req.user_id).await?;
@@ -31,6 +31,8 @@ pub async fn create_message(
                 )
                 .await?;
             }
+
+            None
         }
         create_message::Type::MessageId(message_id) => {
             let source_message = repo::get_message_by_id(&tx, message_id).await?;
@@ -65,10 +67,17 @@ pub async fn create_message(
                 repo::stream_user::Model::new(stream.stream_id, source_message.user_id),
             )
             .await?;
+
+            Some(stream)
         }
     };
 
     tx.commit().await?;
+
+    // TODO: нужно сделать асинк
+    if let Some(stream) = stream.clone() {
+        repo::increase_stream_messages_count(db, stream.stream_id).await?;
+    }
 
     Ok(create_message::Response { message })
 }
@@ -112,7 +121,7 @@ pub async fn get_user_messages(
         .map(|it| it.topic_id)
         .collect();
 
-    let limit = settings.limit;
+    let limit = settings.user_messages_limit;
 
     let mut messages =
         repo::get_messages_by_topic_ids(db, topic_ids, req.cursor_message_id, (limit + 1) as u64)
@@ -203,11 +212,18 @@ pub async fn get_message_messages(
     req: get_message_messages::Request,
     settings: &MessagesSettings,
 ) -> Result<get_message_messages::Response, AppError> {
-    let message = repo::get_message_by_id(db, req.message_id).await?;
+    // let message = repo::get_message_by_id(db, req.message_id).await?;
+    let stream = repo::get_stream_by_message_id(db, req.message_id).await?;
 
-    let mut messages = vec![message.clone()];
+    let limit = settings.message_messages_limit;
 
-    let limit = settings.limit;
+    let mut messages = repo::get_messages_by_stream_id(
+        db,
+        stream.stream_id,
+        req.cursor_message_id,
+        (limit + 1) as u64,
+    )
+    .await?;
 
     let cursor_message = if messages.len() > limit as usize {
         Some(messages.remove(0))
@@ -230,7 +246,7 @@ pub mod get_message_messages {
 
     pub struct Request {
         pub message_id: Uuid,
-        pub _cursor_message_id: Option<Uuid>,
+        pub cursor_message_id: Option<Uuid>,
     }
 
     pub struct Response {

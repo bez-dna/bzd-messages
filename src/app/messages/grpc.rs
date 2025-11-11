@@ -305,7 +305,7 @@ mod get_message_messages {
         fn try_from(req: GetMessageMessagesRequest) -> Result<Self, Self::Error> {
             Ok(Self {
                 message_id: req.message_id().parse()?,
-                _cursor_message_id: req
+                cursor_message_id: req
                     .cursor_message_id
                     .as_deref()
                     .map(Uuid::parse_str)
