@@ -1,6 +1,7 @@
 use sea_orm::{
     ActiveModelTrait as _, ColumnTrait as _, ConnectionTrait, EntityTrait as _,
-    IntoActiveModel as _, JoinType, QueryFilter as _, QuerySelect as _, sea_query::OnConflict,
+    IntoActiveModel as _, JoinType, QueryFilter as _, QuerySelect as _, QueryTrait as _,
+    sea_query::OnConflict,
 };
 use uuid::Uuid;
 
@@ -138,6 +139,8 @@ pub async fn get_topics_by_user_id<T: ConnectionTrait>(
 pub async fn get_messages_by_topic_ids<T: ConnectionTrait>(
     db: &T,
     topic_ids: Vec<Uuid>,
+    cursor_message_id: Option<Uuid>,
+    limit: u64,
 ) -> Result<Vec<message::Model>, AppError> {
     let messages = message::Entity::find()
         .join(
@@ -148,6 +151,11 @@ pub async fn get_messages_by_topic_ids<T: ConnectionTrait>(
                 .into(),
         )
         .filter(message_topic::Column::TopicId.is_in(topic_ids))
+        .apply_if(cursor_message_id, |query, v| {
+            query.filter(message::Column::MessageId.lte(v))
+        })
+        .cursor_by(message::Column::MessageId)
+        .last(limit)
         .all(db)
         .await?;
 

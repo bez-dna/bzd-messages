@@ -1,7 +1,10 @@
 use sea_orm::{DbConn, TransactionTrait as _};
 use uuid::Uuid;
 
-use crate::app::{error::AppError, messages::repo};
+use crate::app::{
+    error::AppError,
+    messages::{repo, settings::MessagesSettings},
+};
 
 pub async fn create_message(
     db: &DbConn,
@@ -103,6 +106,7 @@ pub mod create_message {
 pub async fn get_user_messages(
     db: &DbConn,
     req: get_user_messages::Request,
+    settings: &MessagesSettings,
 ) -> Result<get_user_messages::Response, AppError> {
     let topic_ids: Vec<Uuid> = repo::get_topics_by_user_id(db, req.user_id)
         .await?
@@ -110,9 +114,27 @@ pub async fn get_user_messages(
         .map(|it| it.topic_id)
         .collect();
 
-    let messages = repo::get_messages_by_topic_ids(db, topic_ids).await?;
+    let limit = settings.limit;
 
-    Ok(get_user_messages::Response { messages })
+    let mut messages =
+        repo::get_messages_by_topic_ids(db, topic_ids, req.cursor_message_id, (limit + 1) as u64)
+            .await?;
+
+    let cursor_message = if messages.len() > limit as usize {
+        Some(messages.remove(0))
+    } else {
+        None
+    };
+
+    messages.reverse();
+
+    // Тут и в аналогичных местах осознанно возвращается messages, а не просто ids,
+    // учитывая что на гейте потом идет перезапрос get_messages,
+    // когда нужно будет заниматься оптимизацией, можно будет убрать походы в get_messages или тут возвращать только ids
+    Ok(get_user_messages::Response {
+        messages,
+        cursor_message,
+    })
 }
 
 pub mod get_user_messages {
@@ -122,10 +144,13 @@ pub mod get_user_messages {
 
     pub struct Request {
         pub user_id: Uuid,
+        pub cursor_message_id: Option<Uuid>,
+        // pub limit: Option<i64>,
     }
 
     pub struct Response {
         pub messages: Vec<message::Model>,
+        pub cursor_message: Option<message::Model>,
     }
 }
 

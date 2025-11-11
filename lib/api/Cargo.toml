@@ -6,6 +6,7 @@ edition = "2024"
 tonic = "0.14.2"
 tonic-prost = "0.14.2"
 prost = "0.14.1"
+prost-types = "0.14.1"
 
 [build-dependencies]
 bzd-lib = { git = "https://github.com/bez-dna/bzd-lib.git" }

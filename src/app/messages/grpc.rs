@@ -103,16 +103,17 @@ mod create_message {
 }
 
 async fn get_user_messages(
-    AppState { db, .. }: &AppState,
+    AppState { db, settings, .. }: &AppState,
     req: GetUserMessagesRequest,
 ) -> Result<GetUserMessagesResponse, AppError> {
-    let res = service::get_user_messages(db, req.try_into()?).await?;
+    let res = service::get_user_messages(db, req.try_into()?, &settings.messages).await?;
 
     Ok(res.into())
 }
 
 mod get_user_messages {
     use bzd_messages_api::{GetUserMessagesRequest, GetUserMessagesResponse};
+    use uuid::Uuid;
 
     use crate::app::{
         error::AppError,
@@ -125,6 +126,11 @@ mod get_user_messages {
         fn try_from(req: GetUserMessagesRequest) -> Result<Self, Self::Error> {
             Ok(Self {
                 user_id: req.user_id().parse()?,
+                cursor_message_id: req
+                    .cursor_message_id
+                    .as_deref()
+                    .map(Uuid::parse_str)
+                    .transpose()?,
             })
         }
     }
@@ -133,6 +139,7 @@ mod get_user_messages {
         fn from(res: Response) -> Self {
             Self {
                 message_ids: res.messages.iter().map(|it| it.message_id.into()).collect(),
+                cursor_message_id: res.cursor_message.map(|it| it.message_id.into()),
             }
         }
     }
@@ -149,6 +156,7 @@ async fn get_messages(
 
 mod get_messages {
     use bzd_messages_api::{GetMessagesRequest, GetMessagesResponse, get_messages_response};
+    use prost_types::Timestamp;
     use uuid::Uuid;
 
     use crate::app::{
@@ -188,6 +196,14 @@ mod get_messages {
                 text: message.text.clone().into(),
                 user_id: Some(message.user_id.into()),
                 code: message.code.clone().into(),
+                created_at: Some(Timestamp {
+                    seconds: message.created_at.and_utc().timestamp(),
+                    nanos: 0,
+                }),
+                updated_at: Some(Timestamp {
+                    seconds: message.updated_at.and_utc().timestamp(),
+                    nanos: 0,
+                }),
             }
         }
     }

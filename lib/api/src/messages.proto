@@ -1,6 +1,8 @@
 syntax = "proto3";
 package bzd.messages.messages;
 
+import "google/protobuf/timestamp.proto";
+
 service MessagesService {
     rpc CreateMessage(CreateMessageRequest) returns (CreateMessageResponse);
     rpc GetUserMessages(GetUserMessagesRequest)
@@ -37,6 +39,7 @@ message GetUserMessagesRequest {
 
 message GetUserMessagesResponse {
     repeated string message_ids = 101;
+    optional string cursor_message_id = 102;
 }
 
 message GetMessagesRequest {
@@ -51,5 +54,8 @@ message GetMessagesResponse {
         optional string text = 102;
         optional string user_id = 103;
         optional string code = 104;
+
+        optional google.protobuf.Timestamp created_at = 901;
+        optional google.protobuf.Timestamp updated_at = 902;
     }
 }
