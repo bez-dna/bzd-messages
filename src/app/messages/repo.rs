@@ -26,8 +26,11 @@ pub async fn create_message<T: ConnectionTrait>(
 pub async fn get_message_by_id<T: ConnectionTrait>(
     db: &T,
     message_id: Uuid,
-) -> Result<Option<message::Model>, AppError> {
-    let message = message::Entity::find_by_id(message_id).one(db).await?;
+) -> Result<message::Model, AppError> {
+    let message = message::Entity::find_by_id(message_id)
+        .one(db)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
     Ok(message)
 }

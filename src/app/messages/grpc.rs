@@ -1,6 +1,7 @@
 use bzd_messages_api::{
-    CreateMessageRequest, CreateMessageResponse, GetMessagesRequest, GetMessagesResponse,
-    GetUserMessagesRequest, GetUserMessagesResponse, messages_service_server::MessagesService,
+    CreateMessageRequest, CreateMessageResponse, GetMessageRequest, GetMessageResponse,
+    GetMessagesRequest, GetMessagesResponse, GetUserMessagesRequest, GetUserMessagesResponse,
+    messages_service_server::MessagesService,
 };
 use tonic::{Request, Response, Status};
 
@@ -41,6 +42,15 @@ impl MessagesService for GrpcMessagesService {
         req: Request<GetMessagesRequest>,
     ) -> Result<Response<GetMessagesResponse>, Status> {
         let res = get_messages(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(res))
+    }
+
+    async fn get_message(
+        &self,
+        req: Request<GetMessageRequest>,
+    ) -> Result<Response<GetMessageResponse>, Status> {
+        let res = get_message(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -203,6 +213,58 @@ mod get_messages {
                 updated_at: Some(Timestamp {
                     seconds: message.updated_at.and_utc().timestamp(),
                     nanos: 0,
+                }),
+            }
+        }
+    }
+}
+
+async fn get_message(
+    AppState { db, .. }: &AppState,
+    req: GetMessageRequest,
+) -> Result<GetMessageResponse, AppError> {
+    let res = service::get_message(db, req.try_into()?).await?;
+
+    Ok(res.into())
+}
+
+mod get_message {
+    use bzd_messages_api::{GetMessageRequest, GetMessageResponse, get_message_response};
+    use prost_types::Timestamp;
+
+    use crate::app::{
+        error::AppError,
+        messages::service::get_message::{Request, Response},
+    };
+
+    impl TryFrom<GetMessageRequest> for Request {
+        type Error = AppError;
+
+        fn try_from(req: GetMessageRequest) -> Result<Self, Self::Error> {
+            Ok(Self {
+                message_id: req.message_id().parse()?,
+            })
+        }
+    }
+
+    impl From<Response> for GetMessageResponse {
+        fn from(res: Response) -> Self {
+            let message = res.message;
+
+            Self {
+                message: Some(get_message_response::Message {
+                    message_id: Some(message.message_id.into()),
+                    text: message.text.clone().into(),
+                    user_id: Some(message.user_id.into()),
+                    code: message.code.clone().into(),
+                    created_at: Some(Timestamp {
+                        seconds: message.created_at.and_utc().timestamp(),
+                        nanos: 0,
+                    }),
+                    updated_at: Some(Timestamp {
+                        seconds: message.updated_at.and_utc().timestamp(),
+                        nanos: 0,
+                    }),
                 }),
             }
         }

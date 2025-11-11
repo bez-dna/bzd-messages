@@ -33,9 +33,7 @@ pub async fn create_message(
             }
         }
         create_message::Type::MessageId(message_id) => {
-            let source_message = repo::get_message_by_id(&tx, message_id)
-                .await?
-                .ok_or(AppError::NotFound)?;
+            let source_message = repo::get_message_by_id(&tx, message_id).await?;
 
             // TODO: нужно воткнуть проверку чтобы не создавать 2 более уровень вложенности пока нет саммари.
 
@@ -174,5 +172,28 @@ pub mod get_messages {
 
     pub struct Response {
         pub messages: Vec<message::Model>,
+    }
+}
+
+pub async fn get_message(
+    db: &DbConn,
+    req: get_message::Request,
+) -> Result<get_message::Response, AppError> {
+    let message = repo::get_message_by_id(db, req.message_id).await?;
+
+    Ok(get_message::Response { message })
+}
+
+pub mod get_message {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::message;
+
+    pub struct Request {
+        pub message_id: Uuid,
+    }
+
+    pub struct Response {
+        pub message: message::Model,
     }
 }
