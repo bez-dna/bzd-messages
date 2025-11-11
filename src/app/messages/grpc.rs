@@ -1,6 +1,7 @@
 use bzd_messages_api::{
-    CreateMessageRequest, CreateMessageResponse, GetMessageRequest, GetMessageResponse,
-    GetMessagesRequest, GetMessagesResponse, GetUserMessagesRequest, GetUserMessagesResponse,
+    CreateMessageRequest, CreateMessageResponse, GetMessageMessagesRequest,
+    GetMessageMessagesResponse, GetMessageRequest, GetMessageResponse, GetMessagesRequest,
+    GetMessagesResponse, GetUserMessagesRequest, GetUserMessagesResponse,
     messages_service_server::MessagesService,
 };
 use tonic::{Request, Response, Status};
@@ -51,6 +52,15 @@ impl MessagesService for GrpcMessagesService {
         req: Request<GetMessageRequest>,
     ) -> Result<Response<GetMessageResponse>, Status> {
         let res = get_message(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(res))
+    }
+
+    async fn get_message_messages(
+        &self,
+        req: Request<GetMessageMessagesRequest>,
+    ) -> Result<Response<GetMessageMessagesResponse>, Status> {
+        let res = get_message_messages(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -266,6 +276,49 @@ mod get_message {
                         nanos: 0,
                     }),
                 }),
+            }
+        }
+    }
+}
+
+async fn get_message_messages(
+    AppState { db, settings, .. }: &AppState,
+    req: GetMessageMessagesRequest,
+) -> Result<GetMessageMessagesResponse, AppError> {
+    let res = service::get_message_messages(db, req.try_into()?, &settings.messages).await?;
+
+    Ok(res.into())
+}
+
+mod get_message_messages {
+    use bzd_messages_api::{GetMessageMessagesRequest, GetMessageMessagesResponse};
+    use uuid::Uuid;
+
+    use crate::app::{
+        error::AppError,
+        messages::service::get_message_messages::{Request, Response},
+    };
+
+    impl TryFrom<GetMessageMessagesRequest> for Request {
+        type Error = AppError;
+
+        fn try_from(req: GetMessageMessagesRequest) -> Result<Self, Self::Error> {
+            Ok(Self {
+                message_id: req.message_id().parse()?,
+                _cursor_message_id: req
+                    .cursor_message_id
+                    .as_deref()
+                    .map(Uuid::parse_str)
+                    .transpose()?,
+            })
+        }
+    }
+
+    impl From<Response> for GetMessageMessagesResponse {
+        fn from(res: Response) -> Self {
+            Self {
+                message_ids: res.messages.iter().map(|it| it.message_id.into()).collect(),
+                cursor_message_id: res.cursor_message.map(|it| it.message_id.into()),
             }
         }
     }

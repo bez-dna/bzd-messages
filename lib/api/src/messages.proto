@@ -9,6 +9,8 @@ service MessagesService {
         returns (GetUserMessagesResponse);
     rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
     rpc GetMessage(GetMessageRequest) returns (GetMessageResponse);
+    rpc GetMessageMessages(GetMessageMessagesRequest)
+        returns (GetMessageMessagesResponse);
 }
 
 message CreateMessageRequest {
@@ -77,4 +79,14 @@ message GetMessageResponse {
         optional google.protobuf.Timestamp created_at = 901;
         optional google.protobuf.Timestamp updated_at = 902;
     }
+}
+
+message GetMessageMessagesRequest {
+    optional string message_id = 101;
+    optional string cursor_message_id = 102;
+}
+
+message GetMessageMessagesResponse {
+    repeated string message_ids = 101;
+    optional string cursor_message_id = 102;
 }

@@ -197,3 +197,44 @@ pub mod get_message {
         pub message: message::Model,
     }
 }
+
+pub async fn get_message_messages(
+    db: &DbConn,
+    req: get_message_messages::Request,
+    settings: &MessagesSettings,
+) -> Result<get_message_messages::Response, AppError> {
+    let message = repo::get_message_by_id(db, req.message_id).await?;
+
+    let mut messages = vec![message.clone()];
+
+    let limit = settings.limit;
+
+    let cursor_message = if messages.len() > limit as usize {
+        Some(messages.remove(0))
+    } else {
+        None
+    };
+
+    messages.reverse();
+
+    Ok(get_message_messages::Response {
+        messages,
+        cursor_message,
+    })
+}
+
+pub mod get_message_messages {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::message;
+
+    pub struct Request {
+        pub message_id: Uuid,
+        pub _cursor_message_id: Option<Uuid>,
+    }
+
+    pub struct Response {
+        pub messages: Vec<message::Model>,
+        pub cursor_message: Option<message::Model>,
+    }
+}
