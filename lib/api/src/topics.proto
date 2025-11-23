@@ -2,9 +2,12 @@ syntax = "proto3";
 package bzd.messages.topics;
 
 service TopicsService {
-    rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse);
     rpc GetTopics(GetTopicsRequest) returns (GetTopicsResponse);
     rpc GetTopic(GetTopicRequest) returns (GetTopicResponse);
+
+    rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse);
+    rpc GetUserTopics(GetUserTopicsRequest) returns (GetUserTopicsResponse);
+
     rpc GetTopicsUsers(GetTopicsUsersRequest) returns (GetTopicsUsersResponse);
     rpc CreateTopicUser(CreateTopicUserRequest)
         returns (CreateTopicUserResponse);
@@ -47,6 +50,19 @@ message GetTopicResponse {
         optional string topic_id = 101;
         optional string title = 102;
         optional string user_id = 103;
+    }
+}
+
+message GetUserTopicsRequest {
+    optional string user_id = 101;
+}
+
+message GetUserTopicsResponse {
+    repeated Topic topics = 501;
+
+    message Topic {
+        optional string topic_id = 101;
+        optional string title = 102;
     }
 }
 

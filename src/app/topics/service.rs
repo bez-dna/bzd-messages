@@ -82,6 +82,29 @@ pub mod get_topic {
     }
 }
 
+pub async fn get_user_topics(
+    db: &DbConn,
+    req: get_user_topics::Request,
+) -> Result<get_user_topics::Response, AppError> {
+    let topics = repo::get_topics_by_user_id(db, req.user_id).await?;
+
+    Ok(get_user_topics::Response { topics })
+}
+
+pub mod get_user_topics {
+    use uuid::Uuid;
+
+    use crate::app::topics::repo::topic;
+
+    pub struct Request {
+        pub user_id: Uuid,
+    }
+
+    pub struct Response {
+        pub topics: Vec<topic::Model>,
+    }
+}
+
 pub async fn get_topics_users(
     db: &DbConn,
     req: get_topics_users::Request,

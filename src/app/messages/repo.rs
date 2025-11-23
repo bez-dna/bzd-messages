@@ -1,10 +1,11 @@
 use sea_orm::{
     ActiveModelTrait as _, ColumnTrait as _, ConnectionTrait, EntityTrait as _,
-    IntoActiveModel as _, QueryFilter as _, sea_query::OnConflict,
+    IntoActiveModel as _, JoinType, QueryFilter as _, QuerySelect as _, QueryTrait as _,
+    prelude::Expr, sea_query::OnConflict,
 };
 use uuid::Uuid;
 
-use crate::app::error::AppError;
+use crate::app::{error::AppError, topics::repo::topic_user};
 
 pub mod message;
 pub mod message_stream;
@@ -25,10 +26,25 @@ pub async fn create_message<T: ConnectionTrait>(
 pub async fn get_message_by_id<T: ConnectionTrait>(
     db: &T,
     message_id: Uuid,
-) -> Result<Option<message::Model>, AppError> {
-    let message = message::Entity::find_by_id(message_id).one(db).await?;
+) -> Result<message::Model, AppError> {
+    let message = message::Entity::find_by_id(message_id)
+        .one(db)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
     Ok(message)
+}
+
+pub async fn get_messages_by_ids<T: ConnectionTrait>(
+    db: &T,
+    message_ids: Vec<Uuid>,
+) -> Result<Vec<message::Model>, AppError> {
+    let messages = message::Entity::find()
+        .filter(message::Column::MessageId.is_in(message_ids))
+        .all(db)
+        .await?;
+
+    Ok(messages)
 }
 
 pub async fn create_stream<T: ConnectionTrait>(
@@ -101,5 +117,104 @@ pub async fn create_message_topic<T: ConnectionTrait>(
     message_topic::Entity::insert(model.into_active_model())
         .exec(db)
         .await?;
+    Ok(())
+}
+
+pub async fn get_topics_by_user_id<T: ConnectionTrait>(
+    db: &T,
+    user_id: Uuid,
+) -> Result<Vec<topic::Model>, AppError> {
+    let topics = topic::Entity::find()
+        .join(
+            JoinType::InnerJoin,
+            topic::Entity::belongs_to(topic_user::Entity)
+                .to(topic_user::Column::TopicId)
+                .from(topic::Column::TopicId)
+                .into(),
+        )
+        .filter(topic_user::Column::UserId.eq(user_id))
+        .all(db)
+        .await?;
+
+    Ok(topics)
+}
+
+pub async fn get_messages_by_topic_ids<T: ConnectionTrait>(
+    db: &T,
+    topic_ids: Vec<Uuid>,
+    cursor_message_id: Option<Uuid>,
+    limit: u64,
+) -> Result<Vec<message::Model>, AppError> {
+    let messages = message::Entity::find()
+        .join(
+            JoinType::InnerJoin,
+            message::Entity::belongs_to(message_topic::Entity)
+                .to(message_topic::Column::MessageId)
+                .from(message::Column::MessageId)
+                .into(),
+        )
+        .filter(message_topic::Column::TopicId.is_in(topic_ids))
+        .apply_if(cursor_message_id, |query, v| {
+            query.filter(message::Column::MessageId.lte(v))
+        })
+        .cursor_by(message::Column::MessageId)
+        .last(limit)
+        .all(db)
+        .await?;
+
+    Ok(messages)
+}
+
+pub async fn find_stream_by_message_id<T: ConnectionTrait>(
+    db: &T,
+    message_id: Uuid,
+) -> Result<Option<stream::Model>, AppError> {
+    let stream = stream::Entity::find()
+        .filter(stream::Column::MessageId.eq(message_id))
+        .one(db)
+        .await?;
+
+    Ok(stream)
+}
+
+pub async fn get_messages_by_stream_id<T: ConnectionTrait>(
+    db: &T,
+    stream_id: Uuid,
+    cursor_message_id: Option<Uuid>,
+    limit: u64,
+) -> Result<Vec<message::Model>, AppError> {
+    let messages = message::Entity::find()
+        .join(
+            JoinType::InnerJoin,
+            message::Entity::belongs_to(message_stream::Entity)
+                .to(message_stream::Column::MessageId)
+                .from(message::Column::MessageId)
+                .into(),
+        )
+        .filter(message_stream::Column::StreamId.eq(stream_id))
+        .apply_if(cursor_message_id, |query, v| {
+            query.filter(message::Column::MessageId.lte(v))
+        })
+        .cursor_by(message::Column::MessageId)
+        .last(limit)
+        .all(db)
+        .await?;
+
+    Ok(messages)
+}
+
+pub async fn increase_stream_messages_count<T: ConnectionTrait>(
+    db: &T,
+    stream_id: Uuid,
+) -> Result<(), AppError> {
+    stream::Entity::update_many()
+        .col_expr(
+            stream::Column::MessagesCount,
+            Expr::col(stream::Column::MessagesCount).add(1),
+        )
+        .filter(stream::Column::StreamId.eq(stream_id))
+        .exec(db)
+        .await?;
+
     Ok(())
 }

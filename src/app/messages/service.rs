@@ -1,6 +1,10 @@
 use sea_orm::{DbConn, TransactionTrait as _};
+use uuid::Uuid;
 
-use crate::app::{error::AppError, messages::repo};
+use crate::app::{
+    error::AppError,
+    messages::{repo, settings::MessagesSettings},
+};
 
 pub async fn create_message(
     db: &DbConn,
@@ -11,7 +15,7 @@ pub async fn create_message(
     let message = repo::message::Model::new(req.user_id, req.text, req.code);
     let message = repo::create_message(&tx, message).await?;
 
-    match req.tp {
+    let stream = match req.tp {
         create_message::Type::TopicIds(topic_ids) => {
             let topics =
                 repo::get_topics_by_ids_and_user_id(&tx, topic_ids.clone(), req.user_id).await?;
@@ -27,11 +31,11 @@ pub async fn create_message(
                 )
                 .await?;
             }
+
+            None
         }
         create_message::Type::MessageId(message_id) => {
-            let source_message = repo::get_message_by_id(&tx, message_id)
-                .await?
-                .ok_or(AppError::NotFound)?;
+            let source_message = repo::get_message_by_id(&tx, message_id).await?;
 
             // TODO: нужно воткнуть проверку чтобы не создавать 2 более уровень вложенности пока нет саммари.
 
@@ -63,10 +67,17 @@ pub async fn create_message(
                 repo::stream_user::Model::new(stream.stream_id, source_message.user_id),
             )
             .await?;
+
+            Some(stream)
         }
     };
 
     tx.commit().await?;
+
+    // TODO: нужно сделать асинк
+    if let Some(stream) = stream.clone() {
+        repo::increase_stream_messages_count(db, stream.stream_id).await?;
+    }
 
     Ok(create_message::Response { message })
 }
@@ -75,7 +86,7 @@ pub mod create_message {
     use uuid::Uuid;
     use validator::Validate;
 
-    use crate::app::messages::repo;
+    use crate::app::messages::repo::message;
 
     #[derive(Validate)]
     pub struct Request {
@@ -94,7 +105,157 @@ pub mod create_message {
     }
 
     pub struct Response {
-        pub message: repo::message::Model,
+        pub message: message::Model,
         // pub stream: Option<repo::stream::Model>,
+    }
+}
+
+pub async fn get_user_messages(
+    db: &DbConn,
+    req: get_user_messages::Request,
+    settings: &MessagesSettings,
+) -> Result<get_user_messages::Response, AppError> {
+    let topic_ids: Vec<Uuid> = repo::get_topics_by_user_id(db, req.user_id)
+        .await?
+        .iter()
+        .map(|it| it.topic_id)
+        .collect();
+
+    let limit = settings.user_messages_limit;
+
+    let mut messages =
+        repo::get_messages_by_topic_ids(db, topic_ids, req.cursor_message_id, (limit + 1) as u64)
+            .await?;
+
+    let cursor_message = if messages.len() > limit as usize {
+        Some(messages.remove(0))
+    } else {
+        None
+    };
+
+    messages.reverse();
+
+    // Тут и в аналогичных местах осознанно возвращается messages, а не просто ids,
+    // учитывая что на гейте потом идет перезапрос get_messages,
+    // когда нужно будет заниматься оптимизацией, можно будет убрать походы в get_messages или тут возвращать только ids
+    Ok(get_user_messages::Response {
+        messages,
+        cursor_message,
+    })
+}
+
+pub mod get_user_messages {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::message;
+
+    pub struct Request {
+        pub user_id: Uuid,
+        pub cursor_message_id: Option<Uuid>,
+        // pub limit: Option<i64>,
+    }
+
+    pub struct Response {
+        pub messages: Vec<message::Model>,
+        pub cursor_message: Option<message::Model>,
+    }
+}
+
+pub async fn get_messages(
+    db: &DbConn,
+    req: get_messages::Request,
+) -> Result<get_messages::Response, AppError> {
+    let messages = repo::get_messages_by_ids(db, req.message_ids).await?;
+
+    Ok(get_messages::Response { messages })
+}
+
+pub mod get_messages {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::message;
+
+    pub struct Request {
+        pub message_ids: Vec<Uuid>,
+    }
+
+    pub struct Response {
+        pub messages: Vec<message::Model>,
+    }
+}
+
+pub async fn get_message(
+    db: &DbConn,
+    req: get_message::Request,
+) -> Result<get_message::Response, AppError> {
+    let message = repo::get_message_by_id(db, req.message_id).await?;
+
+    Ok(get_message::Response { message })
+}
+
+pub mod get_message {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::message;
+
+    pub struct Request {
+        pub message_id: Uuid,
+    }
+
+    pub struct Response {
+        pub message: message::Model,
+    }
+}
+
+pub async fn get_message_messages(
+    db: &DbConn,
+    req: get_message_messages::Request,
+    settings: &MessagesSettings,
+) -> Result<get_message_messages::Response, AppError> {
+    let message = repo::get_message_by_id(db, req.message_id).await?;
+    let stream = repo::find_stream_by_message_id(db, req.message_id).await?;
+
+    let limit = settings.message_messages_limit;
+
+    let mut messages = match stream {
+        Some(stream) => {
+            repo::get_messages_by_stream_id(
+                db,
+                stream.stream_id,
+                req.cursor_message_id,
+                (limit + 1) as u64,
+            )
+            .await?
+        }
+        None => vec![message],
+    };
+
+    let cursor_message = if messages.len() > limit as usize {
+        Some(messages.remove(0))
+    } else {
+        None
+    };
+
+    messages.reverse();
+
+    Ok(get_message_messages::Response {
+        messages,
+        cursor_message,
+    })
+}
+
+pub mod get_message_messages {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::message;
+
+    pub struct Request {
+        pub message_id: Uuid,
+        pub cursor_message_id: Option<Uuid>,
+    }
+
+    pub struct Response {
+        pub messages: Vec<message::Model>,
+        pub cursor_message: Option<message::Model>,
     }
 }
