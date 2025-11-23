@@ -307,7 +307,7 @@ mod get_topics_users {
 
             Ok(Self {
                 topic_ids,
-                user_id: req.user_id().parse()?,
+                user_id: req.user_id.as_deref().map(Uuid::parse_str).transpose()?,
             })
         }
     }
