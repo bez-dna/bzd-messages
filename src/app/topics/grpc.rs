@@ -2,7 +2,7 @@ use bzd_messages_api::{
     CreateTopicRequest, CreateTopicResponse, CreateTopicUserRequest, CreateTopicUserResponse,
     DeleteTopicUserRequest, DeleteTopicUserResponse, GetTopicRequest, GetTopicResponse,
     GetTopicsRequest, GetTopicsResponse, GetTopicsUsersRequest, GetTopicsUsersResponse,
-    topics_service_server::TopicsService,
+    GetUserTopicsRequest, GetUserTopicsResponse, topics_service_server::TopicsService,
 };
 use tonic::{Request, Response, Status};
 
@@ -43,6 +43,15 @@ impl TopicsService for GrpcTopicsService {
         req: Request<GetTopicRequest>,
     ) -> Result<Response<GetTopicResponse>, Status> {
         let res = get_topic(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(res))
+    }
+
+    async fn get_user_topics(
+        &self,
+        req: Request<GetUserTopicsRequest>,
+    ) -> Result<Response<GetUserTopicsResponse>, Status> {
+        let res = get_user_topics(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -208,6 +217,56 @@ mod get_topic {
                     title: res.topic.title.into(),
                     user_id: Some(res.topic.user_id.into()),
                 }),
+            }
+        }
+    }
+}
+
+async fn get_user_topics(
+    AppState { db, .. }: &AppState,
+    req: GetUserTopicsRequest,
+) -> Result<GetUserTopicsResponse, AppError> {
+    let res = service::get_user_topics(db, req.try_into()?).await?;
+
+    Ok(res.into())
+}
+
+mod get_user_topics {
+    use bzd_messages_api::{
+        GetUserTopicsRequest, GetUserTopicsResponse, get_user_topics_response::Topic,
+    };
+
+    use crate::app::{
+        error::AppError,
+        topics::{
+            repo,
+            service::get_user_topics::{Request, Response},
+        },
+    };
+
+    impl TryFrom<GetUserTopicsRequest> for Request {
+        type Error = AppError;
+
+        fn try_from(req: GetUserTopicsRequest) -> Result<Self, Self::Error> {
+            Ok(Self {
+                user_id: req.user_id().parse()?,
+            })
+        }
+    }
+
+    impl From<Response> for GetUserTopicsResponse {
+        fn from(res: Response) -> Self {
+            Self {
+                topics: res.topics.into_iter().map(Into::into).collect(),
+            }
+        }
+    }
+
+    impl From<repo::topic::Model> for Topic {
+        fn from(topic: repo::topic::Model) -> Self {
+            Self {
+                topic_id: Some(topic.topic_id.into()),
+                title: topic.title.into(),
             }
         }
     }
