@@ -11,6 +11,8 @@ service TopicsService {
     rpc GetTopicsUsers(GetTopicsUsersRequest) returns (GetTopicsUsersResponse);
     rpc CreateTopicUser(CreateTopicUserRequest)
         returns (CreateTopicUserResponse);
+    rpc UpdateTopicUser(UpdateTopicUserRequest)
+        returns (UpdateTopicUserResponse);
     rpc DeleteTopicUser(DeleteTopicUserRequest)
         returns (DeleteTopicUserResponse);
 }
@@ -78,6 +80,8 @@ message GetTopicsUsersResponse {
         optional string topic_user_id = 101;
         optional string topic_id = 102;
         optional string user_id = 103;
+        optional Timing timing = 104;
+        optional Rate rate = 105;
     }
 }
 
@@ -90,9 +94,32 @@ message CreateTopicUserResponse {
     optional string topic_user_id = 101;
 }
 
+message UpdateTopicUserRequest {
+    optional string current_user_id = 100;
+    optional string topic_user_id = 101;
+    optional Timing timing = 102;
+    optional Rate rate = 103;
+}
+
+message UpdateTopicUserResponse {}
+
 message DeleteTopicUserRequest {
     optional string topic_user_id = 101;
     optional string user_id = 102;
 }
 
 message DeleteTopicUserResponse {}
+
+enum Timing {
+    TIMING_UNKNOWN = 0;
+    TIMING_INSTANT = 1;
+    TIMING_WEEKDAYS = 2;
+    TIMING_WEEKENDS = 3;
+}
+
+enum Rate {
+    RATE_UNKNOWN = 0;
+    RATE_Q = 1;
+    RATE_QW = 2;
+    RATE_QD = 3;
+}

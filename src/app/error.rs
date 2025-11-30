@@ -21,6 +21,8 @@ pub enum AppError {
     Uuid(#[from] uuid::Error),
     #[error("NOT_FOUND")]
     NotFound,
+    #[error("FORBIDDEN")]
+    Forbidden,
     #[error("OTHER")]
     Other,
     #[error("UNREACHABLE")]

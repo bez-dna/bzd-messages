@@ -14,6 +14,8 @@ pub enum TopicsUsers {
     TopicUserId,
     UserId,
     TopicId,
+    Rate,
+    Timing,
 }
 
 #[derive(DeriveIden)]
