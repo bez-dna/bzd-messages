@@ -413,13 +413,12 @@ async fn update_topic_user(
 }
 
 mod update_topic_user {
-    use bzd_messages_api::{Rate, Timing, UpdateTopicUserRequest};
-
     use crate::app::{
         current_user::CurrentUser,
         error::AppError,
         topics::{repo, service::update_topic_user::Request},
     };
+    use bzd_messages_api::{Rate, Timing, UpdateTopicUserRequest};
 
     impl TryFrom<UpdateTopicUserRequest> for Request {
         type Error = AppError;
@@ -429,13 +428,13 @@ mod update_topic_user {
                 current_user: CurrentUser::new(&req.current_user_id)?,
                 topic_user_id: req.topic_user_id().parse()?,
                 rate: match req.rate() {
-                    Rate::Unknown => return Err(AppError::Unreachable),
+                    Rate::Unknown => return Err(AppError::Validation),
                     Rate::Q => repo::topic_user::Rate::Q,
                     Rate::Qd => repo::topic_user::Rate::Qd,
                     Rate::Qw => repo::topic_user::Rate::Qw,
                 },
                 timing: match req.timing() {
-                    Timing::Unknown => return Err(AppError::Unreachable),
+                    Timing::Unknown => return Err(AppError::Validation),
                     Timing::Instant => repo::topic_user::Timing::Instant,
                     Timing::Weekdays => repo::topic_user::Timing::Weekdays,
                     Timing::Weekends => repo::topic_user::Timing::Weekends,
