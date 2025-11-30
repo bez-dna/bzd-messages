@@ -339,8 +339,8 @@ mod get_topics_users {
                 topic_user_id: Some(topic_user.topic_user_id.into()),
                 topic_id: Some(topic_user.topic_id.into()),
                 user_id: Some(topic_user.user_id.into()),
-                timing: Some(rate.into()),
-                rate: Some(timing.into()),
+                timing: Some(timing.into()),
+                rate: Some(rate.into()),
             }
         }
     }
