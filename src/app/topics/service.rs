@@ -170,6 +170,50 @@ pub mod create_topic_user {
     }
 }
 
+pub async fn update_topic_user(
+    db: &DbConn,
+    req: update_topic_user::Request,
+) -> Result<(), AppError> {
+    let topic_user = repo::get_topic_user_by_id(db, req.topic_user_id).await?;
+
+    if !req.current_user.has_access(topic_user.user_id) {
+        return Err(AppError::Forbidden);
+    }
+
+    repo::update_topic_user(db, topic_user.into(), req.into()).await?;
+
+    Ok(())
+}
+
+pub mod update_topic_user {
+    use uuid::Uuid;
+
+    use crate::app::{
+        current_user::CurrentUser,
+        topics::repo::{
+            topic_user::{Rate, Timing},
+            update_topic_user::Data,
+        },
+    };
+
+    // наверное юзать enum из сущностей базы данных в сервисном слое плохо, но пока срежем углы
+    pub struct Request {
+        pub current_user: CurrentUser,
+        pub topic_user_id: Uuid,
+        pub rate: Rate,
+        pub timing: Timing,
+    }
+
+    impl From<Request> for Data {
+        fn from(req: Request) -> Self {
+            Self {
+                rate: req.rate,
+                timing: req.timing,
+            }
+        }
+    }
+}
+
 pub async fn delete_topic_user(
     db: &DbConn,
     req: delete_topic_user::Request,

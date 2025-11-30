@@ -7,6 +7,7 @@ use tracing::info;
 use crate::app::settings::AppSettings;
 use crate::app::state::AppState;
 
+mod current_user;
 mod error;
 mod messages;
 mod settings;

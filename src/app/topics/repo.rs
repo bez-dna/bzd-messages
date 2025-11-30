@@ -1,6 +1,6 @@
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait as _, ConnectionTrait, EntityTrait as _, IntoActiveModel as _,
-    ModelTrait, QueryFilter as _, sea_query::OnConflict,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait as _, ConnectionTrait, EntityTrait as _,
+    IntoActiveModel as _, ModelTrait, QueryFilter as _, sea_query::OnConflict,
 };
 use uuid::Uuid;
 
@@ -107,4 +107,29 @@ pub async fn delete_topic_user<T: ConnectionTrait>(
     topic_user.delete(db).await?;
 
     Ok(())
+}
+
+pub async fn update_topic_user<T: ConnectionTrait>(
+    db: &T,
+    mut topic_user: topic_user::ActiveModel,
+    data: update_topic_user::Data,
+) -> Result<(), AppError> {
+    dbg!(&data);
+
+    topic_user.rate = Set(data.rate);
+    topic_user.timing = Set(data.timing);
+
+    topic_user.update(db).await?;
+
+    Ok(())
+}
+
+pub mod update_topic_user {
+    use crate::app::topics::repo::topic_user::{Rate, Timing};
+
+    #[derive(Debug)]
+    pub struct Data {
+        pub rate: Rate,
+        pub timing: Timing,
+    }
 }
