@@ -147,7 +147,7 @@ async fn get_topics(
 }
 
 mod get_topics {
-    use bzd_messages_api::{GetTopicsRequest, GetTopicsResponse, get_topics_response::Topic};
+    use bzd_messages_api::{GetTopicsRequest, GetTopicsResponse, Topic};
     use uuid::Uuid;
 
     use crate::app::{
@@ -162,13 +162,13 @@ mod get_topics {
         type Error = AppError;
 
         fn try_from(req: GetTopicsRequest) -> Result<Self, Self::Error> {
-            let user_ids = req
-                .user_ids
+            let topic_ids = req
+                .topic_ids
                 .iter()
                 .map(|it| it.parse())
                 .collect::<Result<Vec<Uuid>, _>>()?;
 
-            Ok(Self { user_ids })
+            Ok(Self { topic_ids })
         }
     }
 
@@ -201,7 +201,7 @@ async fn get_topic(
 }
 
 mod get_topic {
-    use bzd_messages_api::{GetTopicRequest, GetTopicResponse, get_topic_response::Topic};
+    use bzd_messages_api::{GetTopicRequest, GetTopicResponse, Topic};
     use uuid::Uuid;
 
     use crate::app::{error::AppError, topics::service::get_topic};
@@ -212,7 +212,6 @@ mod get_topic {
         fn try_from(req: GetTopicRequest) -> Result<Self, Self::Error> {
             let data = Self {
                 topic_id: Uuid::parse_str(req.topic_id())?,
-                user_id: Uuid::parse_str(req.user_id())?,
             };
 
             Ok(data)
@@ -317,7 +316,11 @@ mod get_topics_users {
 
             Ok(Self {
                 topic_ids,
-                user_id: req.user_id.as_deref().map(Uuid::parse_str).transpose()?,
+                user_id: req
+                    .current_user_id
+                    .as_deref()
+                    .map(Uuid::parse_str)
+                    .transpose()?,
             })
         }
     }
@@ -379,6 +382,7 @@ mod create_topic_user {
     use bzd_messages_api::{CreateTopicUserRequest, CreateTopicUserResponse};
 
     use crate::app::{
+        current_user::CurrentUser,
         error::AppError,
         topics::service::create_topic_user::{Request, Response},
     };
@@ -388,8 +392,8 @@ mod create_topic_user {
 
         fn try_from(req: CreateTopicUserRequest) -> Result<Self, Self::Error> {
             Ok(Self {
+                current_user: CurrentUser::new(&req.current_user_id)?,
                 topic_id: req.topic_id().parse()?,
-                user_id: req.user_id().parse()?,
             })
         }
     }
@@ -456,15 +460,17 @@ async fn delete_topic_user(
 mod delete_topic_user {
     use bzd_messages_api::DeleteTopicUserRequest;
 
-    use crate::app::{error::AppError, topics::service::delete_topic_user::Request};
+    use crate::app::{
+        current_user::CurrentUser, error::AppError, topics::service::delete_topic_user::Request,
+    };
 
     impl TryFrom<DeleteTopicUserRequest> for Request {
         type Error = AppError;
 
         fn try_from(req: DeleteTopicUserRequest) -> Result<Self, Self::Error> {
             Ok(Self {
+                current_user: CurrentUser::new(&req.current_user_id)?,
                 topic_user_id: req.topic_user_id().parse()?,
-                user_id: req.user_id().parse()?,
             })
         }
     }

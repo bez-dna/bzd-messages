@@ -14,8 +14,9 @@ service MessagesService {
 }
 
 message CreateMessageRequest {
+    optional string current_user_id = 100;
     optional string text = 101;
-    optional string user_id = 102;
+    optional string xxx = 102;
     optional string code = 103;
     oneof tp {
         Starting starting = 104;
