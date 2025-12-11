@@ -30,12 +30,12 @@ pub async fn get_topics_by_user_id<T: ConnectionTrait>(
     Ok(topics)
 }
 
-pub async fn get_topics_by_user_ids<T: ConnectionTrait>(
+pub async fn get_topics_by_ids<T: ConnectionTrait>(
     db: &T,
-    user_ids: Vec<Uuid>,
+    topic_ids: Vec<Uuid>,
 ) -> Result<Vec<topic::Model>, AppError> {
     let topics = topic::Entity::find()
-        .filter(topic::Column::UserId.is_in(user_ids))
+        .filter(topic::Column::UserId.is_in(topic_ids))
         .all(db)
         .await?;
 
@@ -59,8 +59,11 @@ pub async fn get_topics_users_by_ids_and_user_id<T: ConnectionTrait>(
 pub async fn get_topic_by_id<T: ConnectionTrait>(
     db: &T,
     topic_id: Uuid,
-) -> Result<Option<topic::Model>, AppError> {
-    let topic = topic::Entity::find_by_id(topic_id).one(db).await?;
+) -> Result<topic::Model, AppError> {
+    let topic = topic::Entity::find_by_id(topic_id)
+        .one(db)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
     Ok(topic)
 }
@@ -80,7 +83,7 @@ pub async fn get_topic_user_by_id<T: ConnectionTrait>(
 pub async fn create_topic_user<T: ConnectionTrait>(
     db: &T,
     model: topic_user::Model,
-) -> Result<Option<topic_user::Model>, AppError> {
+) -> Result<topic_user::Model, AppError> {
     topic_user::Entity::insert(model.clone().into_active_model())
         .on_conflict(
             OnConflict::columns([topic_user::Column::TopicId, topic_user::Column::UserId])
@@ -95,7 +98,8 @@ pub async fn create_topic_user<T: ConnectionTrait>(
         .filter(topic_user::Column::TopicId.eq(model.topic_id))
         .filter(topic_user::Column::UserId.eq(model.user_id))
         .one(db)
-        .await?;
+        .await?
+        .ok_or(AppError::Unreachable)?;
 
     Ok(topic_user)
 }

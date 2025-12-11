@@ -83,6 +83,7 @@ mod create_message {
     use validator::Validate as _;
 
     use crate::app::{
+        current_user::CurrentUser,
         error::AppError,
         messages::service::create_message::{Request, Response, Type},
     };
@@ -92,7 +93,7 @@ mod create_message {
 
         fn try_from(req: CreateMessageRequest) -> Result<Self, Self::Error> {
             let data = Self {
-                user_id: Uuid::parse_str(req.user_id())?,
+                current_user: CurrentUser::new(&req.current_user_id)?,
                 text: req.text().into(),
                 code: req.code().into(),
                 tp: match req.tp.ok_or(AppError::Other)? {

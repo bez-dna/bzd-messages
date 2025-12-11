@@ -33,7 +33,7 @@ pub async fn get_topics(
     db: &DbConn,
     req: get_topics::Request,
 ) -> Result<get_topics::Response, AppError> {
-    let topics = repo::get_topics_by_user_ids(db, req.user_ids).await?;
+    let topics = repo::get_topics_by_ids(db, req.topic_ids).await?;
 
     Ok(get_topics::Response { topics })
 }
@@ -44,7 +44,7 @@ pub mod get_topics {
     use crate::app::topics::repo;
 
     pub struct Request {
-        pub user_ids: Vec<Uuid>,
+        pub topic_ids: Vec<Uuid>,
     }
 
     pub struct Response {
@@ -56,13 +56,7 @@ pub async fn get_topic(
     db: &DbConn,
     req: get_topic::Request,
 ) -> Result<get_topic::Response, AppError> {
-    let topic = repo::get_topic_by_id(db, req.topic_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
-    if topic.user_id != req.user_id {
-        return Err(AppError::NotFound);
-    };
+    let topic = repo::get_topic_by_id(db, req.topic_id).await?;
 
     Ok(get_topic::Response { topic })
 }
@@ -74,7 +68,6 @@ pub mod get_topic {
 
     pub struct Request {
         pub topic_id: Uuid,
-        pub user_id: Uuid,
     }
 
     pub struct Response {
@@ -137,20 +130,15 @@ pub async fn create_topic_user(
     db: &DbConn,
     req: create_topic_user::Request,
 ) -> Result<create_topic_user::Response, AppError> {
-    let topic = repo::get_topic_by_id(db, req.topic_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
+    let current_user = req.current_user.ok_or(AppError::Forbidden)?;
 
-    if topic.user_id == req.user_id {
-        return Err(AppError::NotFound);
-    };
+    let topic = repo::get_topic_by_id(db, req.topic_id).await?;
 
     let topic_user = repo::create_topic_user(
         db,
-        repo::topic_user::Model::new(req.user_id, topic.topic_id),
+        repo::topic_user::Model::new(current_user.user_id, topic.topic_id),
     )
-    .await?
-    .ok_or(AppError::Unreachable)?;
+    .await?;
 
     Ok(create_topic_user::Response { topic_user })
 }
@@ -158,11 +146,11 @@ pub async fn create_topic_user(
 pub mod create_topic_user {
     use uuid::Uuid;
 
-    use crate::app::topics::repo;
+    use crate::app::{current_user::CurrentUser, topics::repo};
 
     pub struct Request {
+        pub current_user: Option<CurrentUser>,
         pub topic_id: Uuid,
-        pub user_id: Uuid,
     }
 
     pub struct Response {
@@ -174,11 +162,11 @@ pub async fn update_topic_user(
     db: &DbConn,
     req: update_topic_user::Request,
 ) -> Result<(), AppError> {
+    let current_user = req.current_user.ok_or(AppError::Forbidden)?;
+
     let topic_user = repo::get_topic_user_by_id(db, req.topic_user_id).await?;
 
-    if !req.current_user.has_access(topic_user.user_id) {
-        return Err(AppError::Forbidden);
-    }
+    current_user.check_access(topic_user.user_id)?;
 
     repo::update_topic_user(db, topic_user.into(), req.into()).await?;
 
@@ -198,7 +186,7 @@ pub mod update_topic_user {
 
     // наверное юзать enum из сущностей базы данных в сервисном слое плохо, но пока срежем углы
     pub struct Request {
-        pub current_user: CurrentUser,
+        pub current_user: Option<CurrentUser>,
         pub topic_user_id: Uuid,
         pub rate: Rate,
         pub timing: Timing,
@@ -218,11 +206,11 @@ pub async fn delete_topic_user(
     db: &DbConn,
     req: delete_topic_user::Request,
 ) -> Result<(), AppError> {
+    let current_user = req.current_user.ok_or(AppError::Forbidden)?;
+
     let topic_user = repo::get_topic_user_by_id(db, req.topic_user_id).await?;
 
-    if topic_user.user_id != req.user_id {
-        return Err(AppError::NotFound);
-    }
+    current_user.check_access(topic_user.user_id)?;
 
     repo::delete_topic_user(db, topic_user).await?;
 
@@ -232,8 +220,10 @@ pub async fn delete_topic_user(
 pub mod delete_topic_user {
     use uuid::Uuid;
 
+    use crate::app::current_user::CurrentUser;
+
     pub struct Request {
+        pub current_user: Option<CurrentUser>,
         pub topic_user_id: Uuid,
-        pub user_id: Uuid,
     }
 }

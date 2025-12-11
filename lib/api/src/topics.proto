@@ -26,33 +26,26 @@ message CreateTopicResponse {
     optional string topic_id = 101;
 }
 
+message Topic {
+    optional string topic_id = 101;
+    optional string title = 102;
+    optional string user_id = 103;
+}
+
 message GetTopicsRequest {
-    repeated string user_ids = 101;
+    repeated string topic_ids = 101;
 }
 
 message GetTopicsResponse {
     repeated Topic topics = 501;
-
-    message Topic {
-        optional string topic_id = 101;
-        optional string title = 102;
-        optional string user_id = 103;
-    }
 }
 
 message GetTopicRequest {
     optional string topic_id = 101;
-    optional string user_id = 102;
 }
 
 message GetTopicResponse {
     optional Topic topic = 501;
-
-    message Topic {
-        optional string topic_id = 101;
-        optional string title = 102;
-        optional string user_id = 103;
-    }
 }
 
 message GetUserTopicsRequest {
@@ -69,8 +62,8 @@ message GetUserTopicsResponse {
 }
 
 message GetTopicsUsersRequest {
+    optional string current_user_id = 100;
     repeated string topic_ids = 101;
-    optional string user_id = 102;
 }
 
 message GetTopicsUsersResponse {
@@ -86,8 +79,8 @@ message GetTopicsUsersResponse {
 }
 
 message CreateTopicUserRequest {
+    optional string current_user_id = 100;
     optional string topic_id = 101;
-    optional string user_id = 102;
 }
 
 message CreateTopicUserResponse {
@@ -104,8 +97,8 @@ message UpdateTopicUserRequest {
 message UpdateTopicUserResponse {}
 
 message DeleteTopicUserRequest {
+    optional string current_user_id = 100;
     optional string topic_user_id = 101;
-    optional string user_id = 102;
 }
 
 message DeleteTopicUserResponse {}

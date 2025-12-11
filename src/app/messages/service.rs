@@ -10,15 +10,18 @@ pub async fn create_message(
     db: &DbConn,
     req: create_message::Request,
 ) -> Result<create_message::Response, AppError> {
+    let current_user = req.current_user.ok_or(AppError::Forbidden)?;
+
     let tx = db.begin().await?;
 
-    let message = repo::message::Model::new(req.user_id, req.text, req.code);
+    let message = repo::message::Model::new(current_user.user_id, req.text, req.code);
     let message = repo::create_message(&tx, message).await?;
 
     let stream = match req.tp {
         create_message::Type::TopicIds(topic_ids) => {
             let topics =
-                repo::get_topics_by_ids_and_user_id(&tx, topic_ids.clone(), req.user_id).await?;
+                repo::get_topics_by_ids_and_user_id(&tx, topic_ids.clone(), current_user.user_id)
+                    .await?;
 
             if topics.len() < 1 || topics.len() != topic_ids.len() {
                 return Err(AppError::Other);
@@ -58,7 +61,7 @@ pub async fn create_message(
 
             repo::create_stream_user(
                 &tx,
-                repo::stream_user::Model::new(stream.stream_id, req.user_id),
+                repo::stream_user::Model::new(stream.stream_id, current_user.user_id),
             )
             .await?;
 
@@ -86,11 +89,11 @@ pub mod create_message {
     use uuid::Uuid;
     use validator::Validate;
 
-    use crate::app::messages::repo::message;
+    use crate::app::{current_user::CurrentUser, messages::repo::message};
 
     #[derive(Validate)]
     pub struct Request {
-        pub user_id: Uuid,
+        pub current_user: Option<CurrentUser>,
         #[validate(length(min = 2))]
         pub text: String,
         #[validate(length(min = 2))]
