@@ -53,12 +53,7 @@ message GetUserTopicsRequest {
 }
 
 message GetUserTopicsResponse {
-    repeated Topic topics = 501;
-
-    message Topic {
-        optional string topic_id = 101;
-        optional string title = 102;
-    }
+    repeated string topic_ids = 101;
 }
 
 message GetTopicsUsersRequest {

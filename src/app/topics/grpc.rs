@@ -241,16 +241,11 @@ async fn get_user_topics(
 }
 
 mod get_user_topics {
-    use bzd_messages_api::{
-        GetUserTopicsRequest, GetUserTopicsResponse, get_user_topics_response::Topic,
-    };
+    use bzd_messages_api::{GetUserTopicsRequest, GetUserTopicsResponse};
 
     use crate::app::{
         error::AppError,
-        topics::{
-            repo,
-            service::get_user_topics::{Request, Response},
-        },
+        topics::service::get_user_topics::{Request, Response},
     };
 
     impl TryFrom<GetUserTopicsRequest> for Request {
@@ -266,16 +261,7 @@ mod get_user_topics {
     impl From<Response> for GetUserTopicsResponse {
         fn from(res: Response) -> Self {
             Self {
-                topics: res.topics.into_iter().map(Into::into).collect(),
-            }
-        }
-    }
-
-    impl From<repo::topic::Model> for Topic {
-        fn from(topic: repo::topic::Model) -> Self {
-            Self {
-                topic_id: Some(topic.topic_id.into()),
-                title: topic.title.into(),
+                topic_ids: res.topics.iter().map(|it| it.topic_id.into()).collect(),
             }
         }
     }
