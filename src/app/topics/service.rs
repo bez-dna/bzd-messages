@@ -1,6 +1,10 @@
+use async_nats::jetstream::Context;
 use sea_orm::DbConn;
 
-use crate::app::{error::AppError, topics::repo};
+use crate::app::{
+    error::AppError,
+    topics::{events, repo, settings::TopicsSettings},
+};
 
 pub async fn create_topic(
     db: &DbConn,
@@ -128,6 +132,8 @@ pub mod get_topics_users {
 
 pub async fn create_topic_user(
     db: &DbConn,
+    js: &Context,
+    settings: &TopicsSettings,
     req: create_topic_user::Request,
 ) -> Result<create_topic_user::Response, AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
@@ -137,6 +143,15 @@ pub async fn create_topic_user(
     let topic_user = repo::create_topic_user(
         db,
         repo::topic_user::Model::new(current_user.user_id, topic.topic_id),
+    )
+    .await?;
+
+    // TODO: нужно сделать асинк отсылку (аутбокс??)
+    events::topic_user(
+        js,
+        &settings.events,
+        &topic_user,
+        "app.bezdna.topic_user.created",
     )
     .await?;
 
@@ -160,6 +175,9 @@ pub mod create_topic_user {
 
 pub async fn update_topic_user(
     db: &DbConn,
+    js: &Context,
+    settings: &TopicsSettings,
+
     req: update_topic_user::Request,
 ) -> Result<(), AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
@@ -168,7 +186,15 @@ pub async fn update_topic_user(
 
     current_user.check_access(topic_user.user_id)?;
 
-    repo::update_topic_user(db, topic_user.into(), req.into()).await?;
+    repo::update_topic_user(db, topic_user.clone().into(), req.into()).await?;
+
+    events::topic_user(
+        js,
+        &settings.events,
+        &topic_user,
+        "app.bezdna.topic_user.updated",
+    )
+    .await?;
 
     Ok(())
 }
@@ -204,6 +230,8 @@ pub mod update_topic_user {
 
 pub async fn delete_topic_user(
     db: &DbConn,
+    js: &Context,
+    settings: &TopicsSettings,
     req: delete_topic_user::Request,
 ) -> Result<(), AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
@@ -212,7 +240,15 @@ pub async fn delete_topic_user(
 
     current_user.check_access(topic_user.user_id)?;
 
-    repo::delete_topic_user(db, topic_user).await?;
+    repo::delete_topic_user(db, topic_user.clone()).await?;
+
+    events::topic_user(
+        js,
+        &settings.events,
+        &topic_user,
+        "app.bezdna.topic_user.deleted",
+    )
+    .await?;
 
     Ok(())
 }

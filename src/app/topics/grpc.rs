@@ -356,10 +356,12 @@ mod get_topics_users {
 }
 
 async fn create_topic_user(
-    AppState { db, .. }: &AppState,
+    AppState {
+        db, js, settings, ..
+    }: &AppState,
     req: CreateTopicUserRequest,
 ) -> Result<CreateTopicUserResponse, AppError> {
-    let res = service::create_topic_user(db, req.try_into()?).await?;
+    let res = service::create_topic_user(db, js, &settings.topics, req.try_into()?).await?;
 
     Ok(res.into())
 }
@@ -394,10 +396,12 @@ mod create_topic_user {
 }
 
 async fn update_topic_user(
-    AppState { db, .. }: &AppState,
+    AppState {
+        db, js, settings, ..
+    }: &AppState,
     req: UpdateTopicUserRequest,
 ) -> Result<UpdateTopicUserResponse, AppError> {
-    service::update_topic_user(db, req.try_into()?).await?;
+    service::update_topic_user(db, js, &settings.topics, req.try_into()?).await?;
 
     Ok(UpdateTopicUserResponse::default())
 }
@@ -435,10 +439,12 @@ mod update_topic_user {
 }
 
 async fn delete_topic_user(
-    AppState { db, .. }: &AppState,
+    AppState {
+        db, js, settings, ..
+    }: &AppState,
     req: DeleteTopicUserRequest,
 ) -> Result<(), AppError> {
-    service::delete_topic_user(db, req.try_into()?).await?;
+    service::delete_topic_user(db, js, &settings.topics, req.try_into()?).await?;
 
     Ok(())
 }

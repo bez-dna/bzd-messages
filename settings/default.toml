@@ -17,3 +17,7 @@ message_messages_limit = 5
 
 [messages.events.message]
 subject = "bzd.messages.events.message"
+
+
+[topics.events.topic_user]
+subject = "bzd.messages.events.topic_user"

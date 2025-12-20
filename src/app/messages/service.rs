@@ -4,13 +4,13 @@ use uuid::Uuid;
 
 use crate::app::{
     error::AppError,
-    messages::{events, repo, settings::Settings},
+    messages::{events, repo, settings::MessagesSettings},
 };
 
 pub async fn create_message(
     db: &DbConn,
     js: &Context,
-    settings: &Settings,
+    settings: &MessagesSettings,
     req: create_message::Request,
 ) -> Result<create_message::Response, AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
@@ -122,7 +122,7 @@ pub mod create_message {
 pub async fn get_user_messages(
     db: &DbConn,
     req: get_user_messages::Request,
-    settings: &Settings,
+    settings: &MessagesSettings,
 ) -> Result<get_user_messages::Response, AppError> {
     let topic_ids: Vec<Uuid> = repo::get_topics_by_user_id(db, req.user_id)
         .await?
@@ -219,7 +219,7 @@ pub mod get_message {
 pub async fn get_message_messages(
     db: &DbConn,
     req: get_message_messages::Request,
-    settings: &Settings,
+    settings: &MessagesSettings,
 ) -> Result<get_message_messages::Response, AppError> {
     let message = repo::get_message_by_id(db, req.message_id).await?;
     let stream = repo::find_stream_by_message_id(db, req.message_id).await?;

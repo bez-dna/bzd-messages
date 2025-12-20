@@ -1,9 +1,6 @@
 use async_nats::jetstream::Context;
 use bytes::BytesMut;
 use prost::Message;
-// use ;
-// use bzd_messages_api::Xxx;
-// use bzd_messages_api::Message;
 
 use crate::app::{
     error::AppError,
@@ -20,9 +17,7 @@ pub async fn message(
     let payload: bzd_messages_api::events::Message = message.into();
     payload.encode(&mut buf)?;
 
-    let qq = js.publish(subject, buf.into()).await?;
-
-    dbg!(&qq);
+    js.publish(subject, buf.into()).await?;
 
     Ok(())
 }
