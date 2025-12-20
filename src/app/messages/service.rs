@@ -1,13 +1,16 @@
+use async_nats::jetstream::Context;
 use sea_orm::{DbConn, TransactionTrait as _};
 use uuid::Uuid;
 
 use crate::app::{
     error::AppError,
-    messages::{repo, settings::MessagesSettings},
+    messages::{events, repo, settings::Settings},
 };
 
 pub async fn create_message(
     db: &DbConn,
+    js: &Context,
+    settings: &Settings,
     req: create_message::Request,
 ) -> Result<create_message::Response, AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
@@ -77,10 +80,13 @@ pub async fn create_message(
 
     tx.commit().await?;
 
-    // TODO: нужно сделать асинк
+    // TODO: нужно сделать асинк (и инкриз и отсылку эвентов.. аутбокс?)
+
     if let Some(stream) = stream.clone() {
         repo::increase_stream_messages_count(db, stream.stream_id).await?;
     }
+
+    events::message(js, &settings.events, &message).await?;
 
     Ok(create_message::Response { message })
 }
@@ -116,7 +122,7 @@ pub mod create_message {
 pub async fn get_user_messages(
     db: &DbConn,
     req: get_user_messages::Request,
-    settings: &MessagesSettings,
+    settings: &Settings,
 ) -> Result<get_user_messages::Response, AppError> {
     let topic_ids: Vec<Uuid> = repo::get_topics_by_user_id(db, req.user_id)
         .await?
@@ -213,7 +219,7 @@ pub mod get_message {
 pub async fn get_message_messages(
     db: &DbConn,
     req: get_message_messages::Request,
-    settings: &MessagesSettings,
+    settings: &Settings,
 ) -> Result<get_message_messages::Response, AppError> {
     let message = repo::get_message_by_id(db, req.message_id).await?;
     let stream = repo::find_stream_by_message_id(db, req.message_id).await?;

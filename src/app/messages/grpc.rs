@@ -67,10 +67,12 @@ impl MessagesService for GrpcMessagesService {
 }
 
 async fn create_message(
-    AppState { db, .. }: &AppState,
+    AppState {
+        db, js, settings, ..
+    }: &AppState,
     req: CreateMessageRequest,
 ) -> Result<CreateMessageResponse, AppError> {
-    let res = service::create_message(db, req.try_into()?).await?;
+    let res = service::create_message(db, js, &settings.messages, req.try_into()?).await?;
 
     Ok(res.into())
 }

@@ -16,5 +16,9 @@ fn main() -> Result<(), Error> {
         .file_descriptor_set_path(out_dir.join("topics_descriptor.bin"))
         .compile_protos(&["src/topics.proto"], &["src"])?;
 
+    tonic_prost_build::configure()
+        .file_descriptor_set_path(out_dir.join("events_descriptor.bin"))
+        .compile_protos(&["src/events.proto"], &["src"])?;
+
     Ok(())
 }
