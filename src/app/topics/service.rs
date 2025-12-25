@@ -77,6 +77,59 @@ pub mod get_topic {
     pub struct Response {
         pub topic: repo::topic::Model,
     }
+
+    #[cfg(test)]
+    mod tests {
+        use bzd_lib::error::Error;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        use crate::app::{
+            error::AppError,
+            topics::{
+                repo,
+                service::{self, get_topic::Request},
+            },
+        };
+
+        #[tokio::test]
+        async fn test_ok_get_topic() -> Result<(), Error> {
+            let topic = repo::topic::Model::stub();
+
+            let req = Request {
+                topic_id: topic.topic_id,
+            };
+
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![topic.clone()]])
+                .into_connection();
+
+            let res = service::get_topic(&db, req).await?;
+
+            assert_eq!(res.topic, topic);
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_not_found_get_topic() -> Result<(), Error> {
+            let topic = repo::topic::Model::stub();
+
+            let req = Request {
+                topic_id: topic.topic_id,
+            };
+
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<repo::topic::Model>::new()])
+                .into_connection();
+
+            let res = service::get_topic(&db, req).await;
+
+            assert!(res.is_err());
+            assert!(matches!(res, Err(AppError::NotFound)));
+
+            Ok(())
+        }
+    }
 }
 
 pub async fn get_user_topics(
