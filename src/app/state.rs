@@ -1,12 +1,14 @@
 use bzd_lib::error::Error;
 
-use crate::app::{db::DbState, mess::MessState, settings::AppSettings, topics::state::TopicsState};
+use crate::app::{
+    db::DbState, mess::MessState, messages::state::MessagesState, settings::AppSettings,
+    topics::state::TopicsState,
+};
 
 #[derive(Clone)]
 pub struct AppState {
-    pub db: DbState,
     pub topics: TopicsState,
-    pub mess: MessState,
+    pub messages: MessagesState,
 }
 
 impl AppState {
@@ -21,6 +23,12 @@ impl AppState {
             mess: mess.clone(),
         };
 
-        Ok(Self { db, mess, topics })
+        let messages = MessagesState {
+            settings: settings.messages.clone(),
+            db: db.clone(),
+            mess: mess.clone(),
+        };
+
+        Ok(Self { topics, messages })
     }
 }

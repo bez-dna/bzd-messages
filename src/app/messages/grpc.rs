@@ -6,14 +6,14 @@ use bzd_messages_api::{
 };
 use tonic::{Request, Response, Status};
 
-use crate::app::{error::AppError, messages::service, state::AppState};
+use crate::app::messages::state::MessagesState;
 
 pub struct GrpcMessagesService {
-    pub state: AppState,
+    pub state: MessagesState,
 }
 
 impl GrpcMessagesService {
-    pub fn new(state: AppState) -> Self {
+    pub fn new(state: MessagesState) -> Self {
         Self { state }
     }
 }
@@ -24,7 +24,7 @@ impl MessagesService for GrpcMessagesService {
         &self,
         req: Request<CreateMessageRequest>,
     ) -> Result<Response<CreateMessageResponse>, Status> {
-        let res = create_message(&self.state, req.into_inner()).await?;
+        let res = create_message::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -33,7 +33,7 @@ impl MessagesService for GrpcMessagesService {
         &self,
         req: Request<GetUserMessagesRequest>,
     ) -> Result<Response<GetUserMessagesResponse>, Status> {
-        let res = get_user_messages(&self.state, req.into_inner()).await?;
+        let res = get_user_messages::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -42,7 +42,7 @@ impl MessagesService for GrpcMessagesService {
         &self,
         req: Request<GetMessagesRequest>,
     ) -> Result<Response<GetMessagesResponse>, Status> {
-        let res = get_messages(&self.state, req.into_inner()).await?;
+        let res = get_messages::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -51,7 +51,7 @@ impl MessagesService for GrpcMessagesService {
         &self,
         req: Request<GetMessageRequest>,
     ) -> Result<Response<GetMessageResponse>, Status> {
-        let res = get_message(&self.state, req.into_inner()).await?;
+        let res = get_message::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -60,21 +60,10 @@ impl MessagesService for GrpcMessagesService {
         &self,
         req: Request<GetMessageMessagesRequest>,
     ) -> Result<Response<GetMessageMessagesResponse>, Status> {
-        let res = get_message_messages(&self.state, req.into_inner()).await?;
+        let res = get_message_messages::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
-}
-
-async fn create_message(
-    AppState {
-        db, js, settings, ..
-    }: &AppState,
-    req: CreateMessageRequest,
-) -> Result<CreateMessageResponse, AppError> {
-    let res = service::create_message(db, js, &settings.messages, req.try_into()?).await?;
-
-    Ok(res.into())
 }
 
 mod create_message {
@@ -87,8 +76,25 @@ mod create_message {
     use crate::app::{
         current_user::CurrentUser,
         error::AppError,
-        messages::service::create_message::{Request, Response, Type},
+        messages::{
+            service::{
+                self,
+                create_message::{Request, Response, Type},
+            },
+            state::MessagesState,
+        },
     };
+
+    pub async fn handler(
+        MessagesState {
+            db, mess, settings, ..
+        }: &MessagesState,
+        req: CreateMessageRequest,
+    ) -> Result<CreateMessageResponse, AppError> {
+        let res = service::create_message(&db.conn, &mess.js, &settings, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
 
     impl TryFrom<CreateMessageRequest> for Request {
         type Error = AppError;
@@ -125,23 +131,29 @@ mod create_message {
     }
 }
 
-async fn get_user_messages(
-    AppState { db, settings, .. }: &AppState,
-    req: GetUserMessagesRequest,
-) -> Result<GetUserMessagesResponse, AppError> {
-    let res = service::get_user_messages(db, req.try_into()?, &settings.messages).await?;
-
-    Ok(res.into())
-}
-
 mod get_user_messages {
     use bzd_messages_api::{GetUserMessagesRequest, GetUserMessagesResponse};
     use uuid::Uuid;
 
     use crate::app::{
         error::AppError,
-        messages::service::get_user_messages::{Request, Response},
+        messages::{
+            service::{
+                self,
+                get_user_messages::{Request, Response},
+            },
+            state::MessagesState,
+        },
     };
+
+    pub async fn handler(
+        MessagesState { db, settings, .. }: &MessagesState,
+        req: GetUserMessagesRequest,
+    ) -> Result<GetUserMessagesResponse, AppError> {
+        let res = service::get_user_messages(&db.conn, req.try_into()?, &settings).await?;
+
+        Ok(res.into())
+    }
 
     impl TryFrom<GetUserMessagesRequest> for Request {
         type Error = AppError;
@@ -168,15 +180,6 @@ mod get_user_messages {
     }
 }
 
-async fn get_messages(
-    AppState { db, .. }: &AppState,
-    req: GetMessagesRequest,
-) -> Result<GetMessagesResponse, AppError> {
-    let res = service::get_messages(db, req.try_into()?).await?;
-
-    Ok(res.into())
-}
-
 mod get_messages {
     use bzd_messages_api::{GetMessagesRequest, GetMessagesResponse, get_messages_response};
     use prost_types::Timestamp;
@@ -186,9 +189,22 @@ mod get_messages {
         error::AppError,
         messages::{
             repo::message,
-            service::get_messages::{Request, Response},
+            service::{
+                self,
+                get_messages::{Request, Response},
+            },
+            state::MessagesState,
         },
     };
+
+    pub async fn handler(
+        MessagesState { db, .. }: &MessagesState,
+        req: GetMessagesRequest,
+    ) -> Result<GetMessagesResponse, AppError> {
+        let res = service::get_messages(&db.conn, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
 
     impl TryFrom<GetMessagesRequest> for Request {
         type Error = AppError;
@@ -232,23 +248,29 @@ mod get_messages {
     }
 }
 
-async fn get_message(
-    AppState { db, .. }: &AppState,
-    req: GetMessageRequest,
-) -> Result<GetMessageResponse, AppError> {
-    let res = service::get_message(db, req.try_into()?).await?;
-
-    Ok(res.into())
-}
-
 mod get_message {
     use bzd_messages_api::{GetMessageRequest, GetMessageResponse, get_message_response};
     use prost_types::Timestamp;
 
     use crate::app::{
         error::AppError,
-        messages::service::get_message::{Request, Response},
+        messages::{
+            service::{
+                self,
+                get_message::{Request, Response},
+            },
+            state::MessagesState,
+        },
     };
+
+    pub async fn handler(
+        MessagesState { db, .. }: &MessagesState,
+        req: GetMessageRequest,
+    ) -> Result<GetMessageResponse, AppError> {
+        let res = service::get_message(&db.conn, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
 
     impl TryFrom<GetMessageRequest> for Request {
         type Error = AppError;
@@ -284,23 +306,29 @@ mod get_message {
     }
 }
 
-async fn get_message_messages(
-    AppState { db, settings, .. }: &AppState,
-    req: GetMessageMessagesRequest,
-) -> Result<GetMessageMessagesResponse, AppError> {
-    let res = service::get_message_messages(db, req.try_into()?, &settings.messages).await?;
-
-    Ok(res.into())
-}
-
 mod get_message_messages {
     use bzd_messages_api::{GetMessageMessagesRequest, GetMessageMessagesResponse};
     use uuid::Uuid;
 
     use crate::app::{
         error::AppError,
-        messages::service::get_message_messages::{Request, Response},
+        messages::{
+            service::{
+                self,
+                get_message_messages::{Request, Response},
+            },
+            state::MessagesState,
+        },
     };
+
+    pub async fn handler(
+        MessagesState { db, settings, .. }: &MessagesState,
+        req: GetMessageMessagesRequest,
+    ) -> Result<GetMessageMessagesResponse, AppError> {
+        let res = service::get_message_messages(&db.conn, req.try_into()?, &settings).await?;
+
+        Ok(res.into())
+    }
 
     impl TryFrom<GetMessageMessagesRequest> for Request {
         type Error = AppError;

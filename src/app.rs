@@ -11,7 +11,7 @@ mod current_user;
 mod db;
 mod error;
 mod mess;
-// mod messages;
+mod messages;
 mod settings;
 mod state;
 mod topics;
@@ -40,7 +40,7 @@ async fn http_and_grpc(state: AppState, settings: &HttpSettings) -> Result<(), E
         .add_service(reflection_service)
         .add_service(health_service)
         .add_service(topics::topics_service(&state))
-        // .add_service(messages::messages_service(state.clone()))
+        .add_service(messages::messages_service(&state))
         .into_axum_router();
 
     let listener = tokio::net::TcpListener::bind(&settings.endpoint).await?;

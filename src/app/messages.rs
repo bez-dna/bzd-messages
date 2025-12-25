@@ -7,7 +7,8 @@ mod grpc;
 pub mod repo;
 mod service;
 pub mod settings;
+pub mod state;
 
-pub fn messages_service(state: AppState) -> MessagesServiceServer<GrpcMessagesService> {
-    MessagesServiceServer::new(GrpcMessagesService::new(state))
+pub fn messages_service(state: &AppState) -> MessagesServiceServer<GrpcMessagesService> {
+    MessagesServiceServer::new(GrpcMessagesService::new(state.messages.clone()))
 }
