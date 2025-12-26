@@ -16,7 +16,7 @@ pub mod events {
     pub mod message {
         use strum_macros::{Display, EnumString};
 
-        #[derive(PartialEq, Debug, EnumString, Display)]
+        #[derive(PartialEq, Debug, EnumString, Display, Clone)]
         #[strum(ascii_case_insensitive)]
         pub enum Type {
             #[strum(serialize = "app.bezdna.message.created")]
@@ -50,7 +50,7 @@ pub mod events {
     pub mod topic_user {
         use strum_macros::{Display, EnumString};
 
-        #[derive(PartialEq, Debug, EnumString, Display)]
+        #[derive(PartialEq, Debug, EnumString, Display, Clone)]
         #[strum(ascii_case_insensitive)]
         pub enum Type {
             #[strum(serialize = "app.bezdna.topic-user.created")]
