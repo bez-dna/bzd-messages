@@ -37,11 +37,11 @@ pub async fn publish_message(
 mod publish_message {
     use prost_types::Timestamp;
 
-    use crate::app::messages::repo::{Message, Topic};
+    use crate::app::messages::repo::{MessageModel, TopicModel};
 
     pub struct Payload {
-        pub message: Message,
-        pub topics: Vec<Topic>,
+        pub message: MessageModel,
+        pub topics: Vec<TopicModel>,
     }
 
     impl From<Payload> for bzd_messages_api::events::Message {

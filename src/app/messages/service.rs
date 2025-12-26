@@ -7,7 +7,7 @@ use crate::app::{
     error::AppError,
     messages::{
         events,
-        repo::{self, Message, MessageStream, StreamUser},
+        repo::{self, MessageModel, MessageStreamModel, StreamUserModel},
         settings::MessagesSettings,
     },
 };
@@ -22,7 +22,7 @@ pub async fn create_message(
 
     let tx = db.begin().await?;
 
-    let message = Message::new(current_user.user_id, req.text, req.code);
+    let message = MessageModel::new(current_user.user_id, req.text, req.code);
     let message = repo::create_message(&tx, message).await?;
 
     let stream = match req.tp {
@@ -57,22 +57,25 @@ pub async fn create_message(
 
             repo::create_message_stream(
                 &tx,
-                MessageStream::new(source_message.message_id, stream.stream_id),
+                MessageStreamModel::new(source_message.message_id, stream.stream_id),
             )
             .await?;
 
             repo::create_message_stream(
                 &tx,
-                MessageStream::new(message.message_id, stream.stream_id),
+                MessageStreamModel::new(message.message_id, stream.stream_id),
             )
             .await?;
 
-            repo::create_stream_user(&tx, StreamUser::new(stream.stream_id, current_user.user_id))
-                .await?;
+            repo::create_stream_user(
+                &tx,
+                StreamUserModel::new(stream.stream_id, current_user.user_id),
+            )
+            .await?;
 
             repo::create_stream_user(
                 &tx,
-                StreamUser::new(stream.stream_id, source_message.user_id),
+                StreamUserModel::new(stream.stream_id, source_message.user_id),
             )
             .await?;
 

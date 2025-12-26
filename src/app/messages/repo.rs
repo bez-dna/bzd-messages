@@ -14,11 +14,11 @@ pub mod stream;
 pub mod stream_user;
 pub mod topic;
 
-pub type Message = message::Model;
-pub type Topic = topic::Model;
-pub type MessageStream = message_stream::Model;
+pub type MessageModel = message::Model;
+pub type TopicModel = topic::Model;
+pub type MessageStreamModel = message_stream::Model;
 // pub type MessageTopic = message_topic::Model;
-pub type StreamUser = stream_user::Model;
+pub type StreamUserModel = stream_user::Model;
 
 pub async fn create_message<T: ConnectionTrait>(
     db: &T,
