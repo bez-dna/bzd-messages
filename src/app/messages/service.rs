@@ -1,4 +1,5 @@
 use async_nats::jetstream::Context;
+use bzd_messages_api::events::message::Type;
 use sea_orm::{DbConn, TransactionTrait as _};
 use uuid::Uuid;
 
@@ -86,7 +87,7 @@ pub async fn create_message(
         repo::increase_stream_messages_count(db, stream.stream_id).await?;
     }
 
-    events::message(js, &settings.events, &message).await?;
+    events::message(js, &settings.events, &message, Type::Created).await?;
 
     Ok(create_message::Response { message })
 }

@@ -1,5 +1,6 @@
 use async_nats::jetstream::Context;
 use bytes::BytesMut;
+use bzd_messages_api::events::message::Type;
 use prost::Message;
 
 use crate::app::{
@@ -11,13 +12,18 @@ pub async fn message(
     js: &Context,
     settings: &EventsSettings,
     message: &repo::message::Model,
+    tp: Type,
 ) -> Result<(), AppError> {
     let subject = settings.message.subject.clone();
     let mut buf = BytesMut::new();
     let payload: bzd_messages_api::events::Message = message.into();
     payload.encode(&mut buf)?;
 
-    js.publish(subject, buf.into()).await?;
+    let mut headers = async_nats::HeaderMap::new();
+    headers.append("ce_type", tp.to_string());
+
+    js.publish_with_headers(subject, headers, buf.into())
+        .await?;
 
     Ok(())
 }

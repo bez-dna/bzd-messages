@@ -1,5 +1,6 @@
 use async_nats::{HeaderMap, jetstream::Context};
 use bytes::BytesMut;
+use bzd_messages_api::events::topic_user::Type;
 use prost::Message;
 
 use crate::app::{
@@ -11,7 +12,7 @@ pub async fn topic_user(
     js: &Context,
     settings: &EventsSettings,
     topic_user: &repo::topic_user::Model,
-    tp: &str,
+    tp: Type,
 ) -> Result<(), AppError> {
     let subject = settings.topic_user.subject.clone();
     let mut buf = BytesMut::new();
@@ -19,7 +20,7 @@ pub async fn topic_user(
     payload.encode(&mut buf)?;
 
     let mut headers = HeaderMap::new();
-    headers.append("ce_type", tp);
+    headers.append("ce_type", tp.to_string());
 
     js.publish_with_headers(subject, headers, buf.into())
         .await?;

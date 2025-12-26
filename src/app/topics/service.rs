@@ -1,4 +1,5 @@
 use async_nats::jetstream::Context;
+use bzd_messages_api::events::topic_user::Type;
 use sea_orm::DbConn;
 
 use crate::app::{
@@ -200,13 +201,7 @@ pub async fn create_topic_user(
     .await?;
 
     // TODO: нужно сделать асинк отсылку (аутбокс??)
-    events::topic_user(
-        js,
-        &settings.events,
-        &topic_user,
-        "app.bezdna.topic_user.created",
-    )
-    .await?;
+    events::topic_user(js, &settings.events, &topic_user, Type::Created).await?;
 
     Ok(create_topic_user::Response { topic_user })
 }
@@ -224,6 +219,25 @@ pub mod create_topic_user {
     pub struct Response {
         pub topic_user: repo::topic_user::Model,
     }
+
+    // #[cfg(test)]
+    // mod tests {
+    //     use bzd_lib::error::Error;
+
+    //     use crate::app::topics::service::{self, create_topic_user::Request};
+
+    //     #[tokio::test]
+    //     async fn test_ok_create_topic_user() -> Result<(), Error> {
+    //         let req = Request {
+    //             current_user: todo!(),
+    //             topic_id: todo!(),
+    //         };
+
+    //         // let res = service::create_topic_user(db, js, settings, req).await?;
+
+    //         Ok(())
+    //     }
+    // }
 }
 
 pub async fn update_topic_user(
@@ -241,13 +255,7 @@ pub async fn update_topic_user(
 
     repo::update_topic_user(db, topic_user.clone().into(), req.into()).await?;
 
-    events::topic_user(
-        js,
-        &settings.events,
-        &topic_user,
-        "app.bezdna.topic_user.updated",
-    )
-    .await?;
+    events::topic_user(js, &settings.events, &topic_user, Type::Updated).await?;
 
     Ok(())
 }
@@ -295,13 +303,7 @@ pub async fn delete_topic_user(
 
     repo::delete_topic_user(db, topic_user.clone()).await?;
 
-    events::topic_user(
-        js,
-        &settings.events,
-        &topic_user,
-        "app.bezdna.topic_user.deleted",
-    )
-    .await?;
+    events::topic_user(js, &settings.events, &topic_user, Type::Deleted).await?;
 
     Ok(())
 }
