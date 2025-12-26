@@ -1,22 +1,28 @@
-use async_nats::jetstream::Context;
 use bytes::BytesMut;
 use bzd_messages_api::events::message::Type;
 use prost::Message;
+use sea_orm::DbConn;
+use uuid::Uuid;
 
 use crate::app::{
     error::AppError,
-    messages::{repo, settings::EventsSettings},
+    mess::JS,
+    messages::{events::publish_message::Payload, repo, settings::EventsSettings},
 };
 
-pub async fn message(
-    js: &Context,
+pub async fn publish_message(
+    db: &DbConn,
+    js: &JS,
     settings: &EventsSettings,
-    message: &repo::message::Model,
+    message_id: Uuid,
     tp: Type,
 ) -> Result<(), AppError> {
+    let message = repo::get_message_by_id(db, message_id).await?;
+    let topics = repo::get_topics_by_message_id(db, message.message_id).await?;
+
     let subject = settings.message.subject.clone();
     let mut buf = BytesMut::new();
-    let payload: bzd_messages_api::events::Message = message.into();
+    let payload: bzd_messages_api::events::Message = Payload { message, topics }.into();
     payload.encode(&mut buf)?;
 
     let mut headers = async_nats::HeaderMap::new();
@@ -28,13 +34,18 @@ pub async fn message(
     Ok(())
 }
 
-mod message {
+mod publish_message {
     use prost_types::Timestamp;
 
-    use crate::app::messages::repo;
+    use crate::app::messages::repo::{Message, Topic};
 
-    impl From<&repo::message::Model> for bzd_messages_api::events::Message {
-        fn from(message: &repo::message::Model) -> Self {
+    pub struct Payload {
+        pub message: Message,
+        pub topics: Vec<Topic>,
+    }
+
+    impl From<Payload> for bzd_messages_api::events::Message {
+        fn from(Payload { message, topics }: Payload) -> Self {
             Self {
                 message_id: Some(message.message_id.into()),
                 text: message.text.clone().into(),
@@ -48,6 +59,7 @@ mod message {
                     seconds: message.updated_at.and_utc().timestamp(),
                     nanos: 0,
                 }),
+                topic_ids: topics.iter().map(|it| it.topic_id.into()).collect(),
             }
         }
     }

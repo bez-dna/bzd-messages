@@ -8,6 +8,7 @@ message Message {
     optional string text = 102;
     optional string user_id = 103;
     optional string code = 104;
+    repeated string topic_ids = 105;
 
     optional google.protobuf.Timestamp created_at = 901;
     optional google.protobuf.Timestamp updated_at = 902;
