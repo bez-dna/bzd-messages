@@ -25,6 +25,11 @@ impl Model {
             updated_at: now,
         }
     }
+
+    #[cfg(test)]
+    pub fn stub() -> Self {
+        Model::new(Uuid::now_v7(), "TITLE".into())
+    }
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

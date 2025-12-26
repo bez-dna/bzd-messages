@@ -1,6 +1,11 @@
+use async_nats::jetstream::Context;
+use bzd_messages_api::events::topic_user::Type;
 use sea_orm::DbConn;
 
-use crate::app::{error::AppError, topics::repo};
+use crate::app::{
+    error::AppError,
+    topics::{events, repo, settings::TopicsSettings},
+};
 
 pub async fn create_topic(
     db: &DbConn,
@@ -73,6 +78,59 @@ pub mod get_topic {
     pub struct Response {
         pub topic: repo::topic::Model,
     }
+
+    #[cfg(test)]
+    mod tests {
+        use bzd_lib::error::Error;
+        use sea_orm::{DatabaseBackend, MockDatabase};
+
+        use crate::app::{
+            error::AppError,
+            topics::{
+                repo,
+                service::{self, get_topic::Request},
+            },
+        };
+
+        #[tokio::test]
+        async fn test_ok_get_topic() -> Result<(), Error> {
+            let topic = repo::topic::Model::stub();
+
+            let req = Request {
+                topic_id: topic.topic_id,
+            };
+
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([vec![topic.clone()]])
+                .into_connection();
+
+            let res = service::get_topic(&db, req).await?;
+
+            assert_eq!(res.topic, topic);
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_not_found_get_topic() -> Result<(), Error> {
+            let topic = repo::topic::Model::stub();
+
+            let req = Request {
+                topic_id: topic.topic_id,
+            };
+
+            let db = MockDatabase::new(DatabaseBackend::Postgres)
+                .append_query_results([Vec::<repo::topic::Model>::new()])
+                .into_connection();
+
+            let res = service::get_topic(&db, req).await;
+
+            assert!(res.is_err());
+            assert!(matches!(res, Err(AppError::NotFound)));
+
+            Ok(())
+        }
+    }
 }
 
 pub async fn get_user_topics(
@@ -128,6 +186,8 @@ pub mod get_topics_users {
 
 pub async fn create_topic_user(
     db: &DbConn,
+    js: &Context,
+    settings: &TopicsSettings,
     req: create_topic_user::Request,
 ) -> Result<create_topic_user::Response, AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
@@ -139,6 +199,9 @@ pub async fn create_topic_user(
         repo::topic_user::Model::new(current_user.user_id, topic.topic_id),
     )
     .await?;
+
+    // TODO: нужно сделать асинк отсылку (аутбокс??)
+    events::topic_user(js, &settings.events, &topic_user, Type::Created).await?;
 
     Ok(create_topic_user::Response { topic_user })
 }
@@ -156,10 +219,32 @@ pub mod create_topic_user {
     pub struct Response {
         pub topic_user: repo::topic_user::Model,
     }
+
+    // #[cfg(test)]
+    // mod tests {
+    //     use bzd_lib::error::Error;
+
+    //     use crate::app::topics::service::{self, create_topic_user::Request};
+
+    //     #[tokio::test]
+    //     async fn test_ok_create_topic_user() -> Result<(), Error> {
+    //         let req = Request {
+    //             current_user: todo!(),
+    //             topic_id: todo!(),
+    //         };
+
+    //         // let res = service::create_topic_user(db, js, settings, req).await?;
+
+    //         Ok(())
+    //     }
+    // }
 }
 
 pub async fn update_topic_user(
     db: &DbConn,
+    js: &Context,
+    settings: &TopicsSettings,
+
     req: update_topic_user::Request,
 ) -> Result<(), AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
@@ -168,7 +253,9 @@ pub async fn update_topic_user(
 
     current_user.check_access(topic_user.user_id)?;
 
-    repo::update_topic_user(db, topic_user.into(), req.into()).await?;
+    repo::update_topic_user(db, topic_user.clone().into(), req.into()).await?;
+
+    events::topic_user(js, &settings.events, &topic_user, Type::Updated).await?;
 
     Ok(())
 }
@@ -204,6 +291,8 @@ pub mod update_topic_user {
 
 pub async fn delete_topic_user(
     db: &DbConn,
+    js: &Context,
+    settings: &TopicsSettings,
     req: delete_topic_user::Request,
 ) -> Result<(), AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
@@ -212,7 +301,9 @@ pub async fn delete_topic_user(
 
     current_user.check_access(topic_user.user_id)?;
 
-    repo::delete_topic_user(db, topic_user).await?;
+    repo::delete_topic_user(db, topic_user.clone()).await?;
+
+    events::topic_user(js, &settings.events, &topic_user, Type::Deleted).await?;
 
     Ok(())
 }

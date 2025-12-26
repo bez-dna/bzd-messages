@@ -3,11 +3,17 @@ name = "bzd-messages-api"
 edition = "2024"
 
 [dependencies]
+bzd-lib = { git = "https://github.com/bez-dna/bzd-lib.git" }
+
 tonic = "0.14.2"
 tonic-prost = "0.14.2"
 prost = "0.14.1"
 prost-types = "0.14.1"
 
+strum = "0.27.2"
+strum_macros = "0.27.2"
+
 [build-dependencies]
 bzd-lib = { git = "https://github.com/bez-dna/bzd-lib.git" }
+
 tonic-prost-build = "0.14.2"

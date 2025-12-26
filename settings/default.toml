@@ -6,6 +6,18 @@ endpoint = "0.0.0.0:3000"
 [db]
 endpoint = "postgres://postgres:postgres@0.0.0.0:5432/bzd_messages"
 
+[nats]
+endpoint = "0.0.0.0:4222"
+stream = "bzd"
+consumer = "bzd-messages"
+
 [messages]
 user_messages_limit = 5
 message_messages_limit = 5
+
+[messages.events.message]
+subject = "bzd.messages.events.message"
+
+
+[topics.events.topic_user]
+subject = "bzd.messages.events.topic_user"

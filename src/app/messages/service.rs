@@ -1,20 +1,28 @@
+use async_nats::jetstream::Context;
+use bzd_messages_api::events::message::Type;
 use sea_orm::{DbConn, TransactionTrait as _};
 use uuid::Uuid;
 
 use crate::app::{
     error::AppError,
-    messages::{repo, settings::MessagesSettings},
+    messages::{
+        events,
+        repo::{self, MessageModel, MessageStreamModel, StreamUserModel},
+        settings::MessagesSettings,
+    },
 };
 
 pub async fn create_message(
     db: &DbConn,
+    js: &Context,
+    settings: &MessagesSettings,
     req: create_message::Request,
 ) -> Result<create_message::Response, AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
 
     let tx = db.begin().await?;
 
-    let message = repo::message::Model::new(current_user.user_id, req.text, req.code);
+    let message = MessageModel::new(current_user.user_id, req.text, req.code);
     let message = repo::create_message(&tx, message).await?;
 
     let stream = match req.tp {
@@ -49,25 +57,25 @@ pub async fn create_message(
 
             repo::create_message_stream(
                 &tx,
-                repo::message_stream::Model::new(source_message.message_id, stream.stream_id),
+                MessageStreamModel::new(source_message.message_id, stream.stream_id),
             )
             .await?;
 
             repo::create_message_stream(
                 &tx,
-                repo::message_stream::Model::new(message.message_id, stream.stream_id),
+                MessageStreamModel::new(message.message_id, stream.stream_id),
             )
             .await?;
 
             repo::create_stream_user(
                 &tx,
-                repo::stream_user::Model::new(stream.stream_id, current_user.user_id),
+                StreamUserModel::new(stream.stream_id, current_user.user_id),
             )
             .await?;
 
             repo::create_stream_user(
                 &tx,
-                repo::stream_user::Model::new(stream.stream_id, source_message.user_id),
+                StreamUserModel::new(stream.stream_id, source_message.user_id),
             )
             .await?;
 
@@ -75,12 +83,15 @@ pub async fn create_message(
         }
     };
 
-    tx.commit().await?;
+    // TODO: нужно вытащить из транзации (и инкриз и отсылку эвентов.. аутбокс?)
 
-    // TODO: нужно сделать асинк
     if let Some(stream) = stream.clone() {
         repo::increase_stream_messages_count(db, stream.stream_id).await?;
     }
+
+    events::publish_message(db, js, &settings.events, message.message_id, Type::Created).await?;
+
+    tx.commit().await?;
 
     Ok(create_message::Response { message })
 }

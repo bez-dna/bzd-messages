@@ -17,6 +17,10 @@ pub enum AppError {
     #[error("VALIDATION")]
     Validation,
 
+    #[error("ENCODE")]
+    Encode(#[from] prost::EncodeError),
+    #[error("PUBLISH")]
+    Publish(#[from] async_nats::jetstream::context::PublishError),
     #[error("DB")]
     Db(#[from] sea_orm::DbErr),
     #[error("UUID")]
