@@ -83,15 +83,15 @@ pub async fn create_message(
         }
     };
 
-    // TODO: нужно вытащить из транзации (и инкриз и отсылку эвентов.. аутбокс?)
+    tx.commit().await?;
+
+    // TODO: нужно сделать чтобы оно не терялось (и инкриз и отсылку эвентов.. аутбокс?)
 
     if let Some(stream) = stream.clone() {
         repo::increase_stream_messages_count(db, stream.stream_id).await?;
     }
 
     events::publish_message(db, js, &settings.events, message.message_id, Type::Created).await?;
-
-    tx.commit().await?;
 
     Ok(create_message::Response { message })
 }
