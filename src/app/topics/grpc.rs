@@ -7,14 +7,14 @@ use bzd_messages_api::{
 };
 use tonic::{Request, Response, Status};
 
-use crate::app::{error::AppError, state::AppState, topics::service};
+use crate::app::topics::state::TopicsState;
 
 pub struct GrpcTopicsService {
-    pub state: AppState,
+    pub state: TopicsState,
 }
 
 impl GrpcTopicsService {
-    pub fn new(state: AppState) -> Self {
+    pub fn new(state: TopicsState) -> Self {
         Self { state }
     }
 }
@@ -25,7 +25,7 @@ impl TopicsService for GrpcTopicsService {
         &self,
         req: Request<CreateTopicRequest>,
     ) -> Result<Response<CreateTopicResponse>, Status> {
-        let res = create_topic(&self.state, req.into_inner()).await?;
+        let res = create_topic::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -34,7 +34,7 @@ impl TopicsService for GrpcTopicsService {
         &self,
         req: Request<GetTopicsRequest>,
     ) -> Result<Response<GetTopicsResponse>, Status> {
-        let res = get_topics(&self.state, req.into_inner()).await?;
+        let res = get_topics::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -43,7 +43,7 @@ impl TopicsService for GrpcTopicsService {
         &self,
         req: Request<GetTopicRequest>,
     ) -> Result<Response<GetTopicResponse>, Status> {
-        let res = get_topic(&self.state, req.into_inner()).await?;
+        let res = get_topic::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -52,7 +52,7 @@ impl TopicsService for GrpcTopicsService {
         &self,
         req: Request<GetUserTopicsRequest>,
     ) -> Result<Response<GetUserTopicsResponse>, Status> {
-        let res = get_user_topics(&self.state, req.into_inner()).await?;
+        let res = get_user_topics::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -61,7 +61,7 @@ impl TopicsService for GrpcTopicsService {
         &self,
         req: Request<GetTopicsUsersRequest>,
     ) -> Result<Response<GetTopicsUsersResponse>, Status> {
-        let res = get_topics_users(&self.state, req.into_inner()).await?;
+        let res = get_topics_users::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -70,7 +70,7 @@ impl TopicsService for GrpcTopicsService {
         &self,
         req: Request<CreateTopicUserRequest>,
     ) -> Result<Response<CreateTopicUserResponse>, Status> {
-        let res = create_topic_user(&self.state, req.into_inner()).await?;
+        let res = create_topic_user::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -79,7 +79,7 @@ impl TopicsService for GrpcTopicsService {
         &self,
         req: Request<UpdateTopicUserRequest>,
     ) -> Result<Response<UpdateTopicUserResponse>, Status> {
-        let res = update_topic_user(&self.state, req.into_inner()).await?;
+        let res = update_topic_user::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -88,19 +88,10 @@ impl TopicsService for GrpcTopicsService {
         &self,
         req: Request<DeleteTopicUserRequest>,
     ) -> Result<Response<DeleteTopicUserResponse>, Status> {
-        delete_topic_user(&self.state, req.into_inner()).await?;
+        delete_topic_user::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(DeleteTopicUserResponse::default()))
     }
-}
-
-async fn create_topic(
-    AppState { db, .. }: &AppState,
-    req: CreateTopicRequest,
-) -> Result<CreateTopicResponse, AppError> {
-    let res = service::create_topic(db, req.try_into()?).await?;
-
-    Ok(res.into())
 }
 
 mod create_topic {
@@ -110,8 +101,23 @@ mod create_topic {
 
     use crate::app::{
         error::AppError,
-        topics::service::create_topic::{Request, Response},
+        topics::{
+            service::{
+                self,
+                create_topic::{Request, Response},
+            },
+            state::TopicsState,
+        },
     };
+
+    pub async fn handler(
+        TopicsState { db, .. }: &TopicsState,
+        req: CreateTopicRequest,
+    ) -> Result<CreateTopicResponse, AppError> {
+        let res = service::create_topic(&db.conn, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
 
     impl TryFrom<CreateTopicRequest> for Request {
         type Error = AppError;
@@ -137,15 +143,6 @@ mod create_topic {
     }
 }
 
-async fn get_topics(
-    AppState { db, .. }: &AppState,
-    req: GetTopicsRequest,
-) -> Result<GetTopicsResponse, AppError> {
-    let res = service::get_topics(db, req.try_into()?).await?;
-
-    Ok(res.into())
-}
-
 mod get_topics {
     use bzd_messages_api::{GetTopicsRequest, GetTopicsResponse, Topic};
     use uuid::Uuid;
@@ -154,9 +151,22 @@ mod get_topics {
         error::AppError,
         topics::{
             repo,
-            service::get_topics::{Request, Response},
+            service::{
+                self,
+                get_topics::{Request, Response},
+            },
+            state::TopicsState,
         },
     };
+
+    pub async fn handler(
+        TopicsState { db, .. }: &TopicsState,
+        req: GetTopicsRequest,
+    ) -> Result<GetTopicsResponse, AppError> {
+        let res = service::get_topics(&db.conn, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
 
     impl TryFrom<GetTopicsRequest> for Request {
         type Error = AppError;
@@ -191,20 +201,26 @@ mod get_topics {
     }
 }
 
-async fn get_topic(
-    AppState { db, .. }: &AppState,
-    req: GetTopicRequest,
-) -> Result<GetTopicResponse, AppError> {
-    let res = service::get_topic(db, req.try_into()?).await?;
-
-    Ok(res.into())
-}
-
 mod get_topic {
     use bzd_messages_api::{GetTopicRequest, GetTopicResponse, Topic};
     use uuid::Uuid;
 
-    use crate::app::{error::AppError, topics::service::get_topic};
+    use crate::app::{
+        error::AppError,
+        topics::{
+            service::{self, get_topic},
+            state::TopicsState,
+        },
+    };
+
+    pub async fn handler(
+        TopicsState { db, .. }: &TopicsState,
+        req: GetTopicRequest,
+    ) -> Result<GetTopicResponse, AppError> {
+        let res = service::get_topic(&db.conn, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
 
     impl TryFrom<GetTopicRequest> for get_topic::Request {
         type Error = AppError;
@@ -231,22 +247,28 @@ mod get_topic {
     }
 }
 
-async fn get_user_topics(
-    AppState { db, .. }: &AppState,
-    req: GetUserTopicsRequest,
-) -> Result<GetUserTopicsResponse, AppError> {
-    let res = service::get_user_topics(db, req.try_into()?).await?;
-
-    Ok(res.into())
-}
-
 mod get_user_topics {
     use bzd_messages_api::{GetUserTopicsRequest, GetUserTopicsResponse};
 
     use crate::app::{
         error::AppError,
-        topics::service::get_user_topics::{Request, Response},
+        topics::{
+            service::{
+                self,
+                get_user_topics::{Request, Response},
+            },
+            state::TopicsState,
+        },
     };
+
+    pub async fn handler(
+        TopicsState { db, .. }: &TopicsState,
+        req: GetUserTopicsRequest,
+    ) -> Result<GetUserTopicsResponse, AppError> {
+        let res = service::get_user_topics(&db.conn, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
 
     impl TryFrom<GetUserTopicsRequest> for Request {
         type Error = AppError;
@@ -267,15 +289,6 @@ mod get_user_topics {
     }
 }
 
-async fn get_topics_users(
-    AppState { db, .. }: &AppState,
-    req: GetTopicsUsersRequest,
-) -> Result<GetTopicsUsersResponse, AppError> {
-    let res = service::get_topics_users(db, req.try_into()?).await?;
-
-    Ok(res.into())
-}
-
 mod get_topics_users {
     use bzd_messages_api::{
         GetTopicsUsersRequest, GetTopicsUsersResponse, Rate, Timing, get_topics_users_response,
@@ -286,9 +299,22 @@ mod get_topics_users {
         error::AppError,
         topics::{
             repo,
-            service::get_topics_users::{Request, Response},
+            service::{
+                self,
+                get_topics_users::{Request, Response},
+            },
+            state::TopicsState,
         },
     };
+
+    pub async fn handler(
+        TopicsState { db, .. }: &TopicsState,
+        req: GetTopicsUsersRequest,
+    ) -> Result<GetTopicsUsersResponse, AppError> {
+        let res = service::get_topics_users(&db.conn, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
 
     impl TryFrom<GetTopicsUsersRequest> for Request {
         type Error = AppError;
@@ -355,23 +381,32 @@ mod get_topics_users {
     }
 }
 
-async fn create_topic_user(
-    AppState { db, .. }: &AppState,
-    req: CreateTopicUserRequest,
-) -> Result<CreateTopicUserResponse, AppError> {
-    let res = service::create_topic_user(db, req.try_into()?).await?;
-
-    Ok(res.into())
-}
-
 mod create_topic_user {
     use bzd_messages_api::{CreateTopicUserRequest, CreateTopicUserResponse};
 
     use crate::app::{
         current_user::CurrentUser,
         error::AppError,
-        topics::service::create_topic_user::{Request, Response},
+        topics::{
+            service::{
+                self,
+                create_topic_user::{Request, Response},
+            },
+            state::TopicsState,
+        },
     };
+
+    pub async fn handler(
+        TopicsState {
+            db, mess, settings, ..
+        }: &TopicsState,
+        req: CreateTopicUserRequest,
+    ) -> Result<CreateTopicUserResponse, AppError> {
+        let res =
+            service::create_topic_user(&db.conn, &mess.js, &settings, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
 
     impl TryFrom<CreateTopicUserRequest> for Request {
         type Error = AppError;
@@ -393,22 +428,28 @@ mod create_topic_user {
     }
 }
 
-async fn update_topic_user(
-    AppState { db, .. }: &AppState,
-    req: UpdateTopicUserRequest,
-) -> Result<UpdateTopicUserResponse, AppError> {
-    service::update_topic_user(db, req.try_into()?).await?;
-
-    Ok(UpdateTopicUserResponse::default())
-}
-
 mod update_topic_user {
     use crate::app::{
         current_user::CurrentUser,
         error::AppError,
-        topics::{repo, service::update_topic_user::Request},
+        topics::{
+            repo,
+            service::{self, update_topic_user::Request},
+            state::TopicsState,
+        },
     };
-    use bzd_messages_api::{Rate, Timing, UpdateTopicUserRequest};
+    use bzd_messages_api::{Rate, Timing, UpdateTopicUserRequest, UpdateTopicUserResponse};
+
+    pub async fn handler(
+        TopicsState {
+            db, mess, settings, ..
+        }: &TopicsState,
+        req: UpdateTopicUserRequest,
+    ) -> Result<UpdateTopicUserResponse, AppError> {
+        service::update_topic_user(&db.conn, &mess.js, &settings, req.try_into()?).await?;
+
+        Ok(UpdateTopicUserResponse::default())
+    }
 
     impl TryFrom<UpdateTopicUserRequest> for Request {
         type Error = AppError;
@@ -434,21 +475,28 @@ mod update_topic_user {
     }
 }
 
-async fn delete_topic_user(
-    AppState { db, .. }: &AppState,
-    req: DeleteTopicUserRequest,
-) -> Result<(), AppError> {
-    service::delete_topic_user(db, req.try_into()?).await?;
-
-    Ok(())
-}
-
 mod delete_topic_user {
     use bzd_messages_api::DeleteTopicUserRequest;
 
     use crate::app::{
-        current_user::CurrentUser, error::AppError, topics::service::delete_topic_user::Request,
+        current_user::CurrentUser,
+        error::AppError,
+        topics::{
+            service::{self, delete_topic_user::Request},
+            state::TopicsState,
+        },
     };
+
+    pub async fn handler(
+        TopicsState {
+            db, mess, settings, ..
+        }: &TopicsState,
+        req: DeleteTopicUserRequest,
+    ) -> Result<(), AppError> {
+        service::delete_topic_user(&db.conn, &mess.js, &settings, req.try_into()?).await?;
+
+        Ok(())
+    }
 
     impl TryFrom<DeleteTopicUserRequest> for Request {
         type Error = AppError;

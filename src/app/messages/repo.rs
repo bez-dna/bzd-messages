@@ -14,6 +14,12 @@ pub mod stream;
 pub mod stream_user;
 pub mod topic;
 
+pub type MessageModel = message::Model;
+pub type TopicModel = topic::Model;
+pub type MessageStreamModel = message_stream::Model;
+// pub type MessageTopic = message_topic::Model;
+pub type StreamUserModel = stream_user::Model;
+
 pub async fn create_message<T: ConnectionTrait>(
     db: &T,
     model: message::Model,
@@ -133,6 +139,25 @@ pub async fn get_topics_by_user_id<T: ConnectionTrait>(
                 .into(),
         )
         .filter(topic_user::Column::UserId.eq(user_id))
+        .all(db)
+        .await?;
+
+    Ok(topics)
+}
+
+pub async fn get_topics_by_message_id<T: ConnectionTrait>(
+    db: &T,
+    message_id: Uuid,
+) -> Result<Vec<topic::Model>, AppError> {
+    let topics = topic::Entity::find()
+        .join(
+            JoinType::InnerJoin,
+            topic::Entity::belongs_to(message_topic::Entity)
+                .to(message_topic::Column::TopicId)
+                .from(topic::Column::TopicId)
+                .into(),
+        )
+        .filter(message_topic::Column::MessageId.eq(message_id))
         .all(db)
         .await?;
 

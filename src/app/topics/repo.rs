@@ -118,8 +118,6 @@ pub async fn update_topic_user<T: ConnectionTrait>(
     mut topic_user: topic_user::ActiveModel,
     data: update_topic_user::Data,
 ) -> Result<(), AppError> {
-    dbg!(&data);
-
     topic_user.rate = Set(data.rate);
     topic_user.timing = Set(data.timing);
 
