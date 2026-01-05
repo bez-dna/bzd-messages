@@ -1,4 +1,4 @@
-use bzd_messages_api::{
+use bzd_messages_api::messages::{
     CreateMessageRequest, CreateMessageResponse, GetMessageMessagesRequest,
     GetMessageMessagesResponse, GetMessageRequest, GetMessageResponse, GetMessagesRequest,
     GetMessagesResponse, GetUserMessagesRequest, GetUserMessagesResponse,
@@ -67,7 +67,7 @@ impl MessagesService for GrpcMessagesService {
 }
 
 mod create_message {
-    use bzd_messages_api::{
+    use bzd_messages_api::messages::{
         CreateMessageRequest, CreateMessageResponse, create_message_request::Tp,
     };
     use uuid::Uuid;
@@ -132,7 +132,7 @@ mod create_message {
 }
 
 mod get_user_messages {
-    use bzd_messages_api::{GetUserMessagesRequest, GetUserMessagesResponse};
+    use bzd_messages_api::messages::{GetUserMessagesRequest, GetUserMessagesResponse};
     use uuid::Uuid;
 
     use crate::app::{
@@ -181,7 +181,9 @@ mod get_user_messages {
 }
 
 mod get_messages {
-    use bzd_messages_api::{GetMessagesRequest, GetMessagesResponse, get_messages_response};
+    use bzd_messages_api::messages::{
+        GetMessagesRequest, GetMessagesResponse, get_messages_response,
+    };
     use prost_types::Timestamp;
     use uuid::Uuid;
 
@@ -249,7 +251,7 @@ mod get_messages {
 }
 
 mod get_message {
-    use bzd_messages_api::{GetMessageRequest, GetMessageResponse, get_message_response};
+    use bzd_messages_api::messages::{GetMessageRequest, GetMessageResponse, get_message_response};
     use prost_types::Timestamp;
 
     use crate::app::{
@@ -307,7 +309,7 @@ mod get_message {
 }
 
 mod get_message_messages {
-    use bzd_messages_api::{GetMessageMessagesRequest, GetMessageMessagesResponse};
+    use bzd_messages_api::messages::{GetMessageMessagesRequest, GetMessageMessagesResponse};
     use uuid::Uuid;
 
     use crate::app::{

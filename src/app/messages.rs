@@ -1,4 +1,4 @@
-use bzd_messages_api::messages_service_server::MessagesServiceServer;
+use bzd_messages_api::messages::messages_service_server::MessagesServiceServer;
 
 use crate::app::{messages::grpc::GrpcMessagesService, state::AppState};
 

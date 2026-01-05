@@ -1,4 +1,4 @@
-use bzd_messages_api::topics_service_server::TopicsServiceServer;
+use bzd_messages_api::topics::topics_service_server::TopicsServiceServer;
 
 use crate::app::{state::AppState, topics::grpc::GrpcTopicsService};
 

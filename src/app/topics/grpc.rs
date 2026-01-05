@@ -1,4 +1,4 @@
-use bzd_messages_api::{
+use bzd_messages_api::topics::{
     CreateTopicRequest, CreateTopicResponse, CreateTopicUserRequest, CreateTopicUserResponse,
     DeleteTopicUserRequest, DeleteTopicUserResponse, GetTopicRequest, GetTopicResponse,
     GetTopicsRequest, GetTopicsResponse, GetTopicsUsersRequest, GetTopicsUsersResponse,
@@ -95,7 +95,7 @@ impl TopicsService for GrpcTopicsService {
 }
 
 mod create_topic {
-    use bzd_messages_api::{CreateTopicRequest, CreateTopicResponse};
+    use bzd_messages_api::topics::{CreateTopicRequest, CreateTopicResponse};
     use uuid::Uuid;
     use validator::Validate;
 
@@ -144,7 +144,7 @@ mod create_topic {
 }
 
 mod get_topics {
-    use bzd_messages_api::{GetTopicsRequest, GetTopicsResponse, Topic};
+    use bzd_messages_api::topics::{GetTopicsRequest, GetTopicsResponse, Topic};
     use uuid::Uuid;
 
     use crate::app::{
@@ -202,7 +202,7 @@ mod get_topics {
 }
 
 mod get_topic {
-    use bzd_messages_api::{GetTopicRequest, GetTopicResponse, Topic};
+    use bzd_messages_api::topics::{GetTopicRequest, GetTopicResponse, Topic};
     use uuid::Uuid;
 
     use crate::app::{
@@ -248,7 +248,7 @@ mod get_topic {
 }
 
 mod get_user_topics {
-    use bzd_messages_api::{GetUserTopicsRequest, GetUserTopicsResponse};
+    use bzd_messages_api::topics::{GetUserTopicsRequest, GetUserTopicsResponse};
 
     use crate::app::{
         error::AppError,
@@ -290,7 +290,7 @@ mod get_user_topics {
 }
 
 mod get_topics_users {
-    use bzd_messages_api::{
+    use bzd_messages_api::topics::{
         GetTopicsUsersRequest, GetTopicsUsersResponse, Rate, Timing, get_topics_users_response,
     };
     use uuid::Uuid;
@@ -382,7 +382,7 @@ mod get_topics_users {
 }
 
 mod create_topic_user {
-    use bzd_messages_api::{CreateTopicUserRequest, CreateTopicUserResponse};
+    use bzd_messages_api::topics::{CreateTopicUserRequest, CreateTopicUserResponse};
 
     use crate::app::{
         current_user::CurrentUser,
@@ -438,7 +438,7 @@ mod update_topic_user {
             state::TopicsState,
         },
     };
-    use bzd_messages_api::{Rate, Timing, UpdateTopicUserRequest, UpdateTopicUserResponse};
+    use bzd_messages_api::topics::{Rate, Timing, UpdateTopicUserRequest, UpdateTopicUserResponse};
 
     pub async fn handler(
         TopicsState {
@@ -476,7 +476,7 @@ mod update_topic_user {
 }
 
 mod delete_topic_user {
-    use bzd_messages_api::DeleteTopicUserRequest;
+    use bzd_messages_api::topics::DeleteTopicUserRequest;
 
     use crate::app::{
         current_user::CurrentUser,
