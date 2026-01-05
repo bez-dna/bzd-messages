@@ -1,8 +1,7 @@
 use bzd_messages_api::messages::{
     CreateMessageRequest, CreateMessageResponse, GetMessageMessagesRequest,
     GetMessageMessagesResponse, GetMessageRequest, GetMessageResponse, GetMessagesRequest,
-    GetMessagesResponse, GetUserMessagesRequest, GetUserMessagesResponse,
-    messages_service_server::MessagesService,
+    GetMessagesResponse, messages_service_server::MessagesService,
 };
 use tonic::{Request, Response, Status};
 
@@ -25,15 +24,6 @@ impl MessagesService for GrpcMessagesService {
         req: Request<CreateMessageRequest>,
     ) -> Result<Response<CreateMessageResponse>, Status> {
         let res = create_message::handler(&self.state, req.into_inner()).await?;
-
-        Ok(Response::new(res))
-    }
-
-    async fn get_user_messages(
-        &self,
-        req: Request<GetUserMessagesRequest>,
-    ) -> Result<Response<GetUserMessagesResponse>, Status> {
-        let res = get_user_messages::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -126,55 +116,6 @@ mod create_message {
         fn from(res: Response) -> Self {
             Self {
                 message_id: Some(res.message.message_id.into()),
-            }
-        }
-    }
-}
-
-mod get_user_messages {
-    use bzd_messages_api::messages::{GetUserMessagesRequest, GetUserMessagesResponse};
-    use uuid::Uuid;
-
-    use crate::app::{
-        error::AppError,
-        messages::{
-            service::{
-                self,
-                get_user_messages::{Request, Response},
-            },
-            state::MessagesState,
-        },
-    };
-
-    pub async fn handler(
-        MessagesState { db, settings, .. }: &MessagesState,
-        req: GetUserMessagesRequest,
-    ) -> Result<GetUserMessagesResponse, AppError> {
-        let res = service::get_user_messages(&db.conn, req.try_into()?, &settings).await?;
-
-        Ok(res.into())
-    }
-
-    impl TryFrom<GetUserMessagesRequest> for Request {
-        type Error = AppError;
-
-        fn try_from(req: GetUserMessagesRequest) -> Result<Self, Self::Error> {
-            Ok(Self {
-                user_id: req.user_id().parse()?,
-                cursor_message_id: req
-                    .cursor_message_id
-                    .as_deref()
-                    .map(Uuid::parse_str)
-                    .transpose()?,
-            })
-        }
-    }
-
-    impl From<Response> for GetUserMessagesResponse {
-        fn from(res: Response) -> Self {
-            Self {
-                message_ids: res.messages.iter().map(|it| it.message_id.into()).collect(),
-                cursor_message_id: res.cursor_message.map(|it| it.message_id.into()),
             }
         }
     }
