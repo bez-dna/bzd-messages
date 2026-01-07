@@ -4,14 +4,18 @@ use sea_orm::DbConn;
 
 use crate::app::{
     error::AppError,
-    topics::{events, repo, settings::TopicsSettings},
+    topics::{
+        events,
+        repo::{self, TopicModel, TopicUserModel},
+        settings::TopicsSettings,
+    },
 };
 
 pub async fn create_topic(
     db: &DbConn,
     req: create_topic::Request,
 ) -> Result<create_topic::Response, AppError> {
-    let topic = repo::create_topic(db, repo::topic::Model::new(req.user_id, req.title)).await?;
+    let topic = repo::create_topic(db, TopicModel::new(req.user_id, req.title)).await?;
 
     Ok(create_topic::Response { topic })
 }
@@ -20,7 +24,7 @@ pub mod create_topic {
     use uuid::Uuid;
     use validator::Validate;
 
-    use crate::app::topics::repo;
+    use crate::app::topics::repo::TopicModel;
 
     #[derive(Validate)]
     pub struct Request {
@@ -30,7 +34,7 @@ pub mod create_topic {
     }
 
     pub struct Response {
-        pub topic: repo::topic::Model,
+        pub topic: TopicModel,
     }
 }
 
@@ -46,14 +50,14 @@ pub async fn get_topics(
 pub mod get_topics {
     use uuid::Uuid;
 
-    use crate::app::topics::repo;
+    use crate::app::topics::repo::TopicModel;
 
     pub struct Request {
         pub topic_ids: Vec<Uuid>,
     }
 
     pub struct Response {
-        pub topics: Vec<repo::topic::Model>,
+        pub topics: Vec<TopicModel>,
     }
 }
 
@@ -69,14 +73,14 @@ pub async fn get_topic(
 pub mod get_topic {
     use uuid::Uuid;
 
-    use crate::app::topics::repo;
+    use crate::app::topics::repo::TopicModel;
 
     pub struct Request {
         pub topic_id: Uuid,
     }
 
     pub struct Response {
-        pub topic: repo::topic::Model,
+        pub topic: TopicModel,
     }
 
     #[cfg(test)]
@@ -87,14 +91,14 @@ pub mod get_topic {
         use crate::app::{
             error::AppError,
             topics::{
-                repo,
+                repo::TopicModel,
                 service::{self, get_topic::Request},
             },
         };
 
         #[tokio::test]
         async fn test_ok_get_topic() -> Result<(), Error> {
-            let topic = repo::topic::Model::stub();
+            let topic = TopicModel::stub();
 
             let req = Request {
                 topic_id: topic.topic_id,
@@ -113,14 +117,14 @@ pub mod get_topic {
 
         #[tokio::test]
         async fn test_not_found_get_topic() -> Result<(), Error> {
-            let topic = repo::topic::Model::stub();
+            let topic = TopicModel::stub();
 
             let req = Request {
                 topic_id: topic.topic_id,
             };
 
             let db = MockDatabase::new(DatabaseBackend::Postgres)
-                .append_query_results([Vec::<repo::topic::Model>::new()])
+                .append_query_results([Vec::<TopicModel>::new()])
                 .into_connection();
 
             let res = service::get_topic(&db, req).await;
@@ -145,14 +149,14 @@ pub async fn get_user_topics(
 pub mod get_user_topics {
     use uuid::Uuid;
 
-    use crate::app::topics::repo::topic;
+    use crate::app::topics::repo::TopicModel;
 
     pub struct Request {
         pub user_id: Uuid,
     }
 
     pub struct Response {
-        pub topics: Vec<topic::Model>,
+        pub topics: Vec<TopicModel>,
     }
 }
 
@@ -172,7 +176,7 @@ pub async fn get_topics_users(
 pub mod get_topics_users {
     use uuid::Uuid;
 
-    use crate::app::topics::repo::topic_user;
+    use crate::app::topics::repo::TopicUserModel;
 
     pub struct Request {
         pub topic_ids: Vec<Uuid>,
@@ -180,7 +184,7 @@ pub mod get_topics_users {
     }
 
     pub struct Response {
-        pub topics_users: Vec<topic_user::Model>,
+        pub topics_users: Vec<TopicUserModel>,
     }
 }
 
@@ -196,7 +200,7 @@ pub async fn create_topic_user(
 
     let topic_user = repo::create_topic_user(
         db,
-        repo::topic_user::Model::new(current_user.user_id, topic.topic_id),
+        TopicUserModel::new(current_user.user_id, topic.topic_id),
     )
     .await?;
 
@@ -209,7 +213,7 @@ pub async fn create_topic_user(
 pub mod create_topic_user {
     use uuid::Uuid;
 
-    use crate::app::{current_user::CurrentUser, topics::repo};
+    use crate::app::{current_user::CurrentUser, topics::repo::TopicUserModel};
 
     pub struct Request {
         pub current_user: Option<CurrentUser>,
@@ -217,7 +221,7 @@ pub mod create_topic_user {
     }
 
     pub struct Response {
-        pub topic_user: repo::topic_user::Model,
+        pub topic_user: TopicUserModel,
     }
 
     // #[cfg(test)]

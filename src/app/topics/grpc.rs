@@ -140,7 +140,7 @@ mod get_topics {
     use crate::app::{
         error::AppError,
         topics::{
-            repo,
+            repo::TopicModel,
             service::{
                 self,
                 get_topics::{Request, Response},
@@ -180,8 +180,8 @@ mod get_topics {
         }
     }
 
-    impl From<repo::topic::Model> for Topic {
-        fn from(topic: repo::topic::Model) -> Self {
+    impl From<TopicModel> for Topic {
+        fn from(topic: TopicModel) -> Self {
             Self {
                 topic_id: Some(topic.topic_id.into()),
                 title: topic.title.into(),
@@ -288,7 +288,7 @@ mod get_topics_users {
     use crate::app::{
         error::AppError,
         topics::{
-            repo,
+            repo::TopicUserModel,
             service::{
                 self,
                 get_topics_users::{Request, Response},
@@ -335,8 +335,8 @@ mod get_topics_users {
         }
     }
 
-    impl From<&repo::topic_user::Model> for get_topics_users_response::TopicUser {
-        fn from(topic_user: &repo::topic_user::Model) -> Self {
+    impl From<&TopicUserModel> for get_topics_users_response::TopicUser {
+        fn from(topic_user: &TopicUserModel) -> Self {
             Self {
                 topic_user_id: Some(topic_user.topic_user_id.into()),
                 topic_id: Some(topic_user.topic_id.into()),
