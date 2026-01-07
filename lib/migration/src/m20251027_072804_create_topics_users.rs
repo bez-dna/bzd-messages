@@ -14,8 +14,6 @@ impl MigrationTrait for Migration {
                     .col(uuid(TopicsUsers::TopicUserId).primary_key())
                     .col(uuid(TopicsUsers::UserId))
                     .col(uuid(TopicsUsers::TopicId))
-                    .col(text(TopicsUsers::Timing))
-                    .col(text(TopicsUsers::Rate))
                     .to_owned(),
             )
             .await?;

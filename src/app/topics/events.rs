@@ -5,13 +5,13 @@ use prost::Message;
 
 use crate::app::{
     error::AppError,
-    topics::{repo, settings::EventsSettings},
+    topics::{repo::TopicUserModel, settings::EventsSettings},
 };
 
 pub async fn topic_user(
     js: &Context,
     settings: &EventsSettings,
-    topic_user: &repo::topic_user::Model,
+    topic_user: &TopicUserModel,
     tp: Type,
 ) -> Result<(), AppError> {
     let subject = settings.topic_user.subject.clone();
@@ -31,10 +31,10 @@ pub async fn topic_user(
 mod topic_user {
     use prost_types::Timestamp;
 
-    use crate::app::topics::repo;
+    use crate::app::topics::repo::TopicUserModel;
 
-    impl From<&repo::topic_user::Model> for bzd_messages_api::events::TopicUser {
-        fn from(topic_user: &repo::topic_user::Model) -> Self {
+    impl From<&TopicUserModel> for bzd_messages_api::events::TopicUser {
+        fn from(topic_user: &TopicUserModel) -> Self {
             Self {
                 topic_user_id: Some(topic_user.topic_user_id.into()),
                 user_id: Some(topic_user.user_id.into()),
