@@ -2,8 +2,7 @@ use bzd_messages_api::topics::{
     CreateTopicRequest, CreateTopicResponse, CreateTopicUserRequest, CreateTopicUserResponse,
     DeleteTopicUserRequest, DeleteTopicUserResponse, GetTopicRequest, GetTopicResponse,
     GetTopicsRequest, GetTopicsResponse, GetTopicsUsersRequest, GetTopicsUsersResponse,
-    GetUserTopicsRequest, GetUserTopicsResponse, UpdateTopicUserRequest, UpdateTopicUserResponse,
-    topics_service_server::TopicsService,
+    GetUserTopicsRequest, GetUserTopicsResponse, topics_service_server::TopicsService,
 };
 use tonic::{Request, Response, Status};
 
@@ -71,15 +70,6 @@ impl TopicsService for GrpcTopicsService {
         req: Request<CreateTopicUserRequest>,
     ) -> Result<Response<CreateTopicUserResponse>, Status> {
         let res = create_topic_user::handler(&self.state, req.into_inner()).await?;
-
-        Ok(Response::new(res))
-    }
-
-    async fn update_topic_user(
-        &self,
-        req: Request<UpdateTopicUserRequest>,
-    ) -> Result<Response<UpdateTopicUserResponse>, Status> {
-        let res = update_topic_user::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -291,7 +281,7 @@ mod get_user_topics {
 
 mod get_topics_users {
     use bzd_messages_api::topics::{
-        GetTopicsUsersRequest, GetTopicsUsersResponse, Rate, Timing, get_topics_users_response,
+        GetTopicsUsersRequest, GetTopicsUsersResponse, get_topics_users_response,
     };
     use uuid::Uuid;
 
@@ -347,35 +337,10 @@ mod get_topics_users {
 
     impl From<&repo::topic_user::Model> for get_topics_users_response::TopicUser {
         fn from(topic_user: &repo::topic_user::Model) -> Self {
-            let rate: Rate = topic_user.rate.clone().into();
-            let timing: Timing = topic_user.timing.clone().into();
-
             Self {
                 topic_user_id: Some(topic_user.topic_user_id.into()),
                 topic_id: Some(topic_user.topic_id.into()),
                 user_id: Some(topic_user.user_id.into()),
-                timing: Some(timing.into()),
-                rate: Some(rate.into()),
-            }
-        }
-    }
-
-    impl From<repo::topic_user::Rate> for Rate {
-        fn from(rate: repo::topic_user::Rate) -> Self {
-            match rate {
-                repo::topic_user::Rate::Q => Rate::Q,
-                repo::topic_user::Rate::Qd => Rate::Qd,
-                repo::topic_user::Rate::Qw => Rate::Qw,
-            }
-        }
-    }
-
-    impl From<repo::topic_user::Timing> for Timing {
-        fn from(timing: repo::topic_user::Timing) -> Self {
-            match timing {
-                repo::topic_user::Timing::Instant => Timing::Instant,
-                repo::topic_user::Timing::Weekdays => Timing::Weekdays,
-                repo::topic_user::Timing::Weekends => Timing::Weekends,
             }
         }
     }
@@ -424,53 +389,6 @@ mod create_topic_user {
             Self {
                 topic_user_id: Some(res.topic_user.topic_user_id.into()),
             }
-        }
-    }
-}
-
-mod update_topic_user {
-    use crate::app::{
-        current_user::CurrentUser,
-        error::AppError,
-        topics::{
-            repo,
-            service::{self, update_topic_user::Request},
-            state::TopicsState,
-        },
-    };
-    use bzd_messages_api::topics::{Rate, Timing, UpdateTopicUserRequest, UpdateTopicUserResponse};
-
-    pub async fn handler(
-        TopicsState {
-            db, mess, settings, ..
-        }: &TopicsState,
-        req: UpdateTopicUserRequest,
-    ) -> Result<UpdateTopicUserResponse, AppError> {
-        service::update_topic_user(&db.conn, &mess.js, &settings, req.try_into()?).await?;
-
-        Ok(UpdateTopicUserResponse::default())
-    }
-
-    impl TryFrom<UpdateTopicUserRequest> for Request {
-        type Error = AppError;
-
-        fn try_from(req: UpdateTopicUserRequest) -> Result<Self, Self::Error> {
-            Ok(Self {
-                current_user: CurrentUser::new(&req.current_user_id)?,
-                topic_user_id: req.topic_user_id().parse()?,
-                rate: match req.rate() {
-                    Rate::Unknown => return Err(AppError::Validation),
-                    Rate::Q => repo::topic_user::Rate::Q,
-                    Rate::Qd => repo::topic_user::Rate::Qd,
-                    Rate::Qw => repo::topic_user::Rate::Qw,
-                },
-                timing: match req.timing() {
-                    Timing::Unknown => return Err(AppError::Validation),
-                    Timing::Instant => repo::topic_user::Timing::Instant,
-                    Timing::Weekdays => repo::topic_user::Timing::Weekdays,
-                    Timing::Weekends => repo::topic_user::Timing::Weekends,
-                },
-            })
         }
     }
 }
