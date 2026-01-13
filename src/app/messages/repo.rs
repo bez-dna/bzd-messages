@@ -102,29 +102,29 @@ pub async fn create_stream_user<T: ConnectionTrait>(
     Ok(())
 }
 
-pub async fn get_topics_by_ids_and_user_id<T: ConnectionTrait>(
-    db: &T,
-    topic_ids: Vec<Uuid>,
-    user_id: Uuid,
-) -> Result<Vec<topic::Model>, AppError> {
-    let topics = topic::Entity::find()
-        .filter(topic::Column::UserId.eq(user_id))
-        .filter(topic::Column::TopicId.is_in(topic_ids))
-        .all(db)
-        .await?;
+// pub async fn get_topics_by_ids_and_user_id<T: ConnectionTrait>(
+//     db: &T,
+//     topic_ids: Vec<Uuid>,
+//     user_id: Uuid,
+// ) -> Result<Vec<topic::Model>, AppError> {
+//     let topics = topic::Entity::find()
+//         .filter(topic::Column::UserId.eq(user_id))
+//         .filter(topic::Column::TopicId.is_in(topic_ids))
+//         .all(db)
+//         .await?;
 
-    Ok(topics)
-}
+//     Ok(topics)
+// }
 
-pub async fn create_message_topic<T: ConnectionTrait>(
-    db: &T,
-    model: message_topic::Model,
-) -> Result<(), AppError> {
-    message_topic::Entity::insert(model.into_active_model())
-        .exec(db)
-        .await?;
-    Ok(())
-}
+// pub async fn create_message_topic<T: ConnectionTrait>(
+//     db: &T,
+//     model: message_topic::Model,
+// ) -> Result<(), AppError> {
+//     message_topic::Entity::insert(model.into_active_model())
+//         .exec(db)
+//         .await?;
+//     Ok(())
+// }
 
 pub async fn get_topics_by_message_id<T: ConnectionTrait>(
     db: &T,
@@ -185,14 +185,14 @@ pub async fn get_messages_by_stream_id<T: ConnectionTrait>(
 
 pub async fn increase_stream_messages_count<T: ConnectionTrait>(
     db: &T,
-    stream_id: Uuid,
+    message_id: Uuid,
 ) -> Result<(), AppError> {
     stream::Entity::update_many()
         .col_expr(
             stream::Column::MessagesCount,
             Expr::col(stream::Column::MessagesCount).add(1),
         )
-        .filter(stream::Column::StreamId.eq(stream_id))
+        .filter(stream::Column::MessageId.eq(message_id))
         .exec(db)
         .await?;
 

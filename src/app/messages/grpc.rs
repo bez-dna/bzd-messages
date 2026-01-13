@@ -57,9 +57,7 @@ impl MessagesService for GrpcMessagesService {
 }
 
 mod create_message {
-    use bzd_messages_api::messages::{
-        CreateMessageRequest, CreateMessageResponse, create_message_request::Tp,
-    };
+    use bzd_messages_api::messages::{CreateMessageRequest, CreateMessageResponse};
     use uuid::Uuid;
     use validator::Validate as _;
 
@@ -69,7 +67,7 @@ mod create_message {
         messages::{
             service::{
                 self,
-                create_message::{Request, Response, Type},
+                create_message::{Request, Response},
             },
             state::MessagesState,
         },
@@ -94,16 +92,7 @@ mod create_message {
                 current_user: CurrentUser::new(&req.current_user_id)?,
                 text: req.text().into(),
                 code: req.code().into(),
-                tp: match req.tp.ok_or(AppError::Other)? {
-                    Tp::Starting(starting) => Type::TopicIds(
-                        starting
-                            .topic_ids
-                            .iter()
-                            .map(|it| Uuid::parse_str(&it))
-                            .collect::<Result<Vec<Uuid>, uuid::Error>>()?,
-                    ),
-                    Tp::Regular(regular) => Type::MessageId(Uuid::parse_str(regular.message_id())?),
-                },
+                message_id: req.message_id.as_deref().map(Uuid::parse_str).transpose()?,
             };
 
             data.validate()?;
