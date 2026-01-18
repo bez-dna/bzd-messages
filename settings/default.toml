@@ -12,8 +12,8 @@ stream = "bzd"
 consumer = "bzd-messages"
 
 [messages]
-user_messages_limit = 5
-message_messages_limit = 5
+user_messages_limit = 25
+message_messages_limit = 25
 
 [messages.events.message]
 subject = "bzd.messages.events.message"
