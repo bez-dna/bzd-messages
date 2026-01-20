@@ -91,7 +91,7 @@ mod create_message {
             let data = Self {
                 current_user: CurrentUser::new(&req.current_user_id)?,
                 text: req.text().into(),
-                code: req.code().into(),
+                code: req.code().parse()?,
                 message_id: req.message_id.as_deref().map(Uuid::parse_str).transpose()?,
             };
 

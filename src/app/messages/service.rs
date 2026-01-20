@@ -21,7 +21,7 @@ pub async fn create_message(
 
     let tx = db.begin().await?;
 
-    let message = MessageModel::new(current_user.user_id, req.text, req.code);
+    let message = MessageModel::new(current_user.user_id, req.text, req.code.to_string());
     let message = repo::create_message(&tx, message).await?;
 
     if let Some(message_id) = req.message_id {
@@ -78,8 +78,7 @@ pub mod create_message {
         pub current_user: Option<CurrentUser>,
         #[validate(length(min = 2))]
         pub text: String,
-        #[validate(length(min = 2))]
-        pub code: String,
+        pub code: Uuid,
         pub message_id: Option<Uuid>,
     }
 
