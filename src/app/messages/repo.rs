@@ -10,15 +10,15 @@ use crate::app::error::AppError;
 pub mod message;
 pub mod message_stream;
 pub mod message_topic;
+pub mod message_user;
 pub mod stream;
-pub mod stream_user;
 pub mod topic;
 
 pub type MessageModel = message::Model;
 pub type TopicModel = topic::Model;
 pub type MessageStreamModel = message_stream::Model;
 // pub type MessageTopic = message_topic::Model;
-pub type StreamUserModel = stream_user::Model;
+pub type MessageUserModel = message_user::Model;
 
 pub async fn create_message<T: ConnectionTrait>(
     db: &T,
@@ -89,11 +89,11 @@ pub async fn create_message_stream<T: ConnectionTrait>(
     Ok(())
 }
 
-pub async fn create_stream_user<T: ConnectionTrait>(
+pub async fn create_message_user<T: ConnectionTrait>(
     db: &T,
-    model: stream_user::Model,
+    model: MessageUserModel,
 ) -> Result<(), AppError> {
-    stream_user::Entity::insert(model.into_active_model())
+    message_user::Entity::insert(model.into_active_model())
         .on_conflict(OnConflict::new().do_nothing().to_owned())
         .do_nothing()
         .exec(db)

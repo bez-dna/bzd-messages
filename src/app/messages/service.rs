@@ -6,7 +6,7 @@ use crate::app::{
     error::AppError,
     messages::{
         events,
-        repo::{self, MessageModel, MessageStreamModel, StreamUserModel},
+        repo::{self, MessageModel, MessageStreamModel, MessageUserModel},
         settings::MessagesSettings,
     },
 };
@@ -44,15 +44,15 @@ pub async fn create_message(
         )
         .await?;
 
-        repo::create_stream_user(
+        repo::create_message_user(
             &tx,
-            StreamUserModel::new(stream.stream_id, current_user.user_id),
+            MessageUserModel::new(source_message.message_id, message.user_id),
         )
         .await?;
-
-        repo::create_stream_user(
+    } else {
+        repo::create_message_user(
             &tx,
-            StreamUserModel::new(stream.stream_id, source_message.user_id),
+            MessageUserModel::new(message.message_id, message.user_id),
         )
         .await?;
     };

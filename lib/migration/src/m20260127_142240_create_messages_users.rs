@@ -1,6 +1,6 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use crate::entities::StreamsUsers;
+use crate::entities::MessagesUsers;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -10,10 +10,10 @@ impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
             .create_table(
-                table_auto(StreamsUsers::Table)
-                    .col(uuid(StreamsUsers::StreamUserId).primary_key())
-                    .col(uuid(StreamsUsers::UserId))
-                    .col(uuid(StreamsUsers::StreamId))
+                table_auto(MessagesUsers::Table)
+                    .col(uuid(MessagesUsers::MessageUserId).primary_key())
+                    .col(uuid(MessagesUsers::MessageId))
+                    .col(uuid(MessagesUsers::UserId))
                     .to_owned(),
             )
             .await?;
@@ -21,11 +21,11 @@ impl MigrationTrait for Migration {
         manager
             .create_index(
                 Index::create()
-                    .name("streams_users_stream_id_user_id_udx")
+                    .name("messages_users_message_id_user_id_udx")
                     .unique()
-                    .table(StreamsUsers::Table)
-                    .col(StreamsUsers::UserId)
-                    .col(StreamsUsers::StreamId)
+                    .table(MessagesUsers::Table)
+                    .col(MessagesUsers::MessageId)
+                    .col(MessagesUsers::UserId)
                     .to_owned(),
             )
             .await?;
@@ -33,9 +33,9 @@ impl MigrationTrait for Migration {
         manager
             .create_index(
                 Index::create()
-                    .name("streams_users_user_id_idx")
-                    .table(StreamsUsers::Table)
-                    .col(StreamsUsers::UserId)
+                    .name("messages_users_user_id_idx")
+                    .table(MessagesUsers::Table)
+                    .col(MessagesUsers::UserId)
                     .to_owned(),
             )
             .await?;
@@ -43,9 +43,9 @@ impl MigrationTrait for Migration {
         manager
             .create_index(
                 Index::create()
-                    .name("streams_users_stream_id_idx")
-                    .table(StreamsUsers::Table)
-                    .col(StreamsUsers::StreamId)
+                    .name("messages_users_message_id_idx")
+                    .table(MessagesUsers::Table)
+                    .col(MessagesUsers::MessageId)
                     .to_owned(),
             )
             .await?;
@@ -55,7 +55,7 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(StreamsUsers::Table).to_owned())
+            .drop_table(Table::drop().table(MessagesUsers::Table).to_owned())
             .await
     }
 }
