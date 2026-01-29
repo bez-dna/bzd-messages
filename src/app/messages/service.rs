@@ -46,13 +46,19 @@ pub async fn create_message(
 
         repo::create_message_user(
             &tx,
-            MessageUserModel::new(source_message.message_id, message.user_id),
+            MessageUserModel::new(source_message.message_id, message.user_id, false),
+        )
+        .await?;
+
+        repo::create_message_user(
+            &tx,
+            MessageUserModel::new(source_message.message_id, source_message.user_id, false),
         )
         .await?;
     } else {
         repo::create_message_user(
             &tx,
-            MessageUserModel::new(message.message_id, message.user_id),
+            MessageUserModel::new(message.message_id, message.user_id, true),
         )
         .await?;
     };

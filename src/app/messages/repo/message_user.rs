@@ -8,12 +8,13 @@ pub struct Model {
     pub message_user_id: Uuid,
     pub user_id: Uuid,
     pub message_id: Uuid,
+    pub is_owned: bool,
     pub created_at: DateTime,
     pub updated_at: DateTime,
 }
 
 impl Model {
-    pub fn new(message_id: Uuid, user_id: Uuid) -> Self {
+    pub fn new(message_id: Uuid, user_id: Uuid, is_owned: bool) -> Self {
         let now = Utc::now().naive_utc();
         let message_user_id = Uuid::now_v7();
 
@@ -21,6 +22,7 @@ impl Model {
             message_user_id,
             message_id,
             user_id,
+            is_owned,
             created_at: now,
             updated_at: now,
         }

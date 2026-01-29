@@ -56,4 +56,5 @@ pub enum MessagesUsers {
     MessageUserId,
     MessageId,
     UserId,
+    IsOwned,
 }

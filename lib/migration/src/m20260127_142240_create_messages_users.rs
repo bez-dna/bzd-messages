@@ -14,6 +14,7 @@ impl MigrationTrait for Migration {
                     .col(uuid(MessagesUsers::MessageUserId).primary_key())
                     .col(uuid(MessagesUsers::MessageId))
                     .col(uuid(MessagesUsers::UserId))
+                    .col(boolean(MessagesUsers::IsOwned))
                     .to_owned(),
             )
             .await?;
@@ -46,6 +47,16 @@ impl MigrationTrait for Migration {
                     .name("messages_users_message_id_idx")
                     .table(MessagesUsers::Table)
                     .col(MessagesUsers::MessageId)
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_index(
+                Index::create()
+                    .name("messages_users_is_owned_idx")
+                    .table(MessagesUsers::Table)
+                    .col(MessagesUsers::IsOwned)
                     .to_owned(),
             )
             .await?;
