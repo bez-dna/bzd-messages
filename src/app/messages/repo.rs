@@ -1,7 +1,7 @@
 use sea_orm::{
     ActiveModelTrait as _, ColumnTrait as _, ConnectionTrait, EntityTrait as _,
-    IntoActiveModel as _, JoinType, QueryFilter as _, QuerySelect as _, QueryTrait as _,
-    prelude::Expr, sea_query::OnConflict,
+    IntoActiveModel as _, JoinType, QueryFilter as _, QueryOrder as _, QuerySelect as _,
+    QueryTrait as _, prelude::Expr, sea_query::OnConflict,
 };
 use uuid::Uuid;
 
@@ -197,4 +197,24 @@ pub async fn increase_stream_messages_count<T: ConnectionTrait>(
         .await?;
 
     Ok(())
+}
+
+pub async fn get_messages_users_by_user_id<T: ConnectionTrait>(
+    db: &T,
+    user_id: Uuid,
+    cursor_message_id: Option<Uuid>,
+    limit: u64,
+) -> Result<Vec<MessageUserModel>, AppError> {
+    let messages_users = message_user::Entity::find()
+        .filter(message_user::Column::UserId.eq(user_id))
+        .filter(message_user::Column::IsOwned.eq(true))
+        .apply_if(cursor_message_id, |query, v| {
+            query.filter(message_user::Column::MessageUserId.lte(v))
+        })
+        .order_by_desc(message_user::Column::MessageUserId)
+        .limit(limit)
+        .all(db)
+        .await?;
+
+    Ok(messages_users)
 }

@@ -147,7 +147,7 @@ pub async fn get_message_messages(
     let message = repo::get_message_by_id(db, req.message_id).await?;
     let stream = repo::find_stream_by_message_id(db, req.message_id).await?;
 
-    let limit = settings.message_messages_limit;
+    let limit = settings.limits.message;
 
     let mut messages = match stream {
         Some(stream) => {
@@ -189,5 +189,45 @@ pub mod get_message_messages {
     pub struct Response {
         pub messages: Vec<message::Model>,
         pub cursor_message: Option<message::Model>,
+    }
+}
+
+pub async fn get_user_messages(
+    db: &DbConn,
+    req: get_user_messages::Request,
+    settings: &MessagesSettings,
+) -> Result<get_user_messages::Response, AppError> {
+    let limit = settings.limits.user;
+
+    let mut messages_users =
+        repo::get_messages_users_by_user_id(db, req.user_id, req.cursor_message_id, limit + 1)
+            .await?;
+
+    let cursor_message_user =
+        if messages_users.len() > usize::try_from(limit).map_err(|_| AppError::Unreachable)? {
+            messages_users.pop()
+        } else {
+            None
+        };
+
+    Ok(get_user_messages::Response {
+        messages_users,
+        cursor_message_user,
+    })
+}
+
+pub mod get_user_messages {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::MessageUserModel;
+
+    pub struct Request {
+        pub user_id: Uuid,
+        pub cursor_message_id: Option<Uuid>,
+    }
+
+    pub struct Response {
+        pub messages_users: Vec<MessageUserModel>,
+        pub cursor_message_user: Option<MessageUserModel>,
     }
 }

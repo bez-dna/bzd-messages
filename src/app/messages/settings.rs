@@ -2,7 +2,8 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
 pub struct MessagesSettings {
-    pub message_messages_limit: i64,
+    // pub messages_limit: i64,
+    pub limits: LimitsSettings,
 
     pub events: EventsSettings,
 }
@@ -15,4 +16,10 @@ pub struct EventsSettings {
 #[derive(Deserialize, Clone)]
 pub struct MessageSettings {
     pub subject: String,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct LimitsSettings {
+    pub user: u64,
+    pub message: u64,
 }

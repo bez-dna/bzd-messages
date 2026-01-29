@@ -9,6 +9,8 @@ service MessagesService {
     rpc GetMessage(GetMessageRequest) returns (GetMessageResponse);
     rpc GetMessageMessages(GetMessageMessagesRequest)
         returns (GetMessageMessagesResponse);
+    rpc GetUserMessages(GetUserMessagesRequest)
+        returns (GetUserMessagesResponse);
 }
 
 message CreateMessageRequest {
@@ -64,6 +66,16 @@ message GetMessageMessagesRequest {
 }
 
 message GetMessageMessagesResponse {
+    repeated string message_ids = 101;
+    optional string cursor_message_id = 102;
+}
+
+message GetUserMessagesRequest {
+    optional string user_id = 101;
+    optional string cursor_message_id = 102;
+}
+
+message GetUserMessagesResponse {
     repeated string message_ids = 101;
     optional string cursor_message_id = 102;
 }
