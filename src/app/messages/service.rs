@@ -234,3 +234,26 @@ pub mod get_user_messages {
         pub cursor_message_user: Option<MessageUserModel>,
     }
 }
+
+pub async fn get_streams(
+    db: &DbConn,
+    req: get_streams::Request,
+) -> Result<get_streams::Response, AppError> {
+    let streams = repo::get_streams_by_message_ids(db, req.message_ids).await?;
+
+    Ok(get_streams::Response { streams })
+}
+
+pub mod get_streams {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::StreamModel;
+
+    pub struct Request {
+        pub message_ids: Vec<Uuid>,
+    }
+
+    pub struct Response {
+        pub streams: Vec<StreamModel>,
+    }
+}

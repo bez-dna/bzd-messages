@@ -19,6 +19,7 @@ pub type TopicModel = topic::Model;
 pub type MessageStreamModel = message_stream::Model;
 // pub type MessageTopic = message_topic::Model;
 pub type MessageUserModel = message_user::Model;
+pub type StreamModel = stream::Model;
 
 pub async fn create_message<T: ConnectionTrait>(
     db: &T,
@@ -217,4 +218,16 @@ pub async fn get_messages_users_by_user_id<T: ConnectionTrait>(
         .await?;
 
     Ok(messages_users)
+}
+
+pub async fn get_streams_by_message_ids<T: ConnectionTrait>(
+    db: &T,
+    message_ids: Vec<Uuid>,
+) -> Result<Vec<StreamModel>, AppError> {
+    let streams = stream::Entity::find()
+        .filter(stream::Column::MessageId.is_in(message_ids))
+        .all(db)
+        .await?;
+
+    Ok(streams)
 }

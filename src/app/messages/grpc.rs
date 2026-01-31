@@ -1,8 +1,8 @@
 use bzd_messages_api::messages::{
     CreateMessageRequest, CreateMessageResponse, GetMessageMessagesRequest,
     GetMessageMessagesResponse, GetMessageRequest, GetMessageResponse, GetMessagesRequest,
-    GetMessagesResponse, GetUserMessagesRequest, GetUserMessagesResponse,
-    messages_service_server::MessagesService,
+    GetMessagesResponse, GetStreamsRequest, GetStreamsResponse, GetUserMessagesRequest,
+    GetUserMessagesResponse, messages_service_server::MessagesService,
 };
 use tonic::{Request, Response, Status};
 
@@ -61,6 +61,15 @@ impl MessagesService for GrpcMessagesService {
         req: Request<GetUserMessagesRequest>,
     ) -> Result<Response<GetUserMessagesResponse>, Status> {
         let res = get_user_messages::handler(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(res))
+    }
+
+    async fn get_streams(
+        &self,
+        req: Request<GetStreamsRequest>,
+    ) -> Result<Response<GetStreamsResponse>, Status> {
+        let res = get_streams::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -345,6 +354,74 @@ mod get_user_messages {
                     .map(|it| it.message_id.into())
                     .collect(),
                 cursor_message_id: res.cursor_message_user.map(|it| it.message_id.into()),
+            }
+        }
+    }
+}
+
+mod get_streams {
+    use bzd_messages_api::messages::{GetStreamsRequest, GetStreamsResponse, get_streams_response};
+    use prost_types::Timestamp;
+    use uuid::Uuid;
+
+    use crate::app::{
+        error::AppError,
+        messages::{
+            repo::StreamModel,
+            service::{
+                self,
+                get_streams::{Request, Response},
+            },
+            state::MessagesState,
+        },
+    };
+
+    pub async fn handler(
+        MessagesState { db, .. }: &MessagesState,
+        req: GetStreamsRequest,
+    ) -> Result<GetStreamsResponse, AppError> {
+        let res = service::get_streams(&db.conn, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
+
+    impl TryFrom<GetStreamsRequest> for Request {
+        type Error = AppError;
+
+        fn try_from(req: GetStreamsRequest) -> Result<Self, Self::Error> {
+            let message_ids = req
+                .message_ids
+                .iter()
+                .map(|it| it.parse())
+                .collect::<Result<Vec<Uuid>, _>>()?;
+
+            Ok(Self { message_ids })
+        }
+    }
+
+    impl From<Response> for GetStreamsResponse {
+        fn from(res: Response) -> Self {
+            Self {
+                streams: res.streams.iter().map(Into::into).collect(),
+            }
+        }
+    }
+
+    impl From<&StreamModel> for get_streams_response::Stream {
+        fn from(stream: &StreamModel) -> Self {
+            Self {
+                stream_id: Some(stream.stream_id.into()),
+                message_id: Some(stream.message_id.into()),
+                text: stream.text.clone().into(),
+                messages_count: Some(stream.messages_count),
+                created_at: Some(Timestamp {
+                    seconds: stream.created_at.and_utc().timestamp(),
+                    nanos: 0,
+                }),
+                updated_at: Some(Timestamp {
+                    seconds: stream.updated_at.and_utc().timestamp(),
+                    nanos: 0,
+                }),
             }
         }
     }
