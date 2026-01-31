@@ -55,6 +55,11 @@ pub async fn create_message(
             MessageUserModel::new(source_message.message_id, source_message.user_id, false),
         )
         .await?;
+
+        // TODO: скорее всего стоит вытащить из транзакции, т.к. это по сути неявный лок на запись,
+        // а если много юзеров будет постить в один стрим, это будет растягивать транзакцию, а это будет сильнее пул
+        // утилизировать
+        repo::increase_stream_messages_count(db, message_id).await?;
     } else {
         repo::create_message_user(
             &tx,
@@ -66,8 +71,6 @@ pub async fn create_message(
     tx.commit().await?;
 
     // TODO: нужно сделать чтобы оно не терялось (и инкриз и отсылку эвентов.. аутбокс?)
-
-    repo::increase_stream_messages_count(db, message.message_id).await?;
     events::publish_message(db, js, &settings.events, message.message_id, Type::Created).await?;
 
     Ok(create_message::Response { message })
