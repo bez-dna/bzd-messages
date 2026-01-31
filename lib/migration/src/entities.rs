@@ -51,9 +51,10 @@ pub enum MessagesTopics {
 }
 
 #[derive(DeriveIden)]
-pub enum StreamsUsers {
+pub enum MessagesUsers {
     Table,
-    StreamUserId,
-    StreamId,
+    MessageUserId,
+    MessageId,
     UserId,
+    IsOwned,
 }

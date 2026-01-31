@@ -1,7 +1,7 @@
 use sea_orm::{
     ActiveModelTrait as _, ColumnTrait as _, ConnectionTrait, EntityTrait as _,
-    IntoActiveModel as _, JoinType, QueryFilter as _, QuerySelect as _, QueryTrait as _,
-    prelude::Expr, sea_query::OnConflict,
+    IntoActiveModel as _, JoinType, QueryFilter as _, QueryOrder as _, QuerySelect as _,
+    QueryTrait as _, prelude::Expr, sea_query::OnConflict,
 };
 use uuid::Uuid;
 
@@ -10,15 +10,16 @@ use crate::app::error::AppError;
 pub mod message;
 pub mod message_stream;
 pub mod message_topic;
+pub mod message_user;
 pub mod stream;
-pub mod stream_user;
 pub mod topic;
 
 pub type MessageModel = message::Model;
 pub type TopicModel = topic::Model;
 pub type MessageStreamModel = message_stream::Model;
 // pub type MessageTopic = message_topic::Model;
-pub type StreamUserModel = stream_user::Model;
+pub type MessageUserModel = message_user::Model;
+pub type StreamModel = stream::Model;
 
 pub async fn create_message<T: ConnectionTrait>(
     db: &T,
@@ -89,11 +90,11 @@ pub async fn create_message_stream<T: ConnectionTrait>(
     Ok(())
 }
 
-pub async fn create_stream_user<T: ConnectionTrait>(
+pub async fn create_message_user<T: ConnectionTrait>(
     db: &T,
-    model: stream_user::Model,
+    model: MessageUserModel,
 ) -> Result<(), AppError> {
-    stream_user::Entity::insert(model.into_active_model())
+    message_user::Entity::insert(model.into_active_model())
         .on_conflict(OnConflict::new().do_nothing().to_owned())
         .do_nothing()
         .exec(db)
@@ -102,29 +103,29 @@ pub async fn create_stream_user<T: ConnectionTrait>(
     Ok(())
 }
 
-pub async fn get_topics_by_ids_and_user_id<T: ConnectionTrait>(
-    db: &T,
-    topic_ids: Vec<Uuid>,
-    user_id: Uuid,
-) -> Result<Vec<topic::Model>, AppError> {
-    let topics = topic::Entity::find()
-        .filter(topic::Column::UserId.eq(user_id))
-        .filter(topic::Column::TopicId.is_in(topic_ids))
-        .all(db)
-        .await?;
+// pub async fn get_topics_by_ids_and_user_id<T: ConnectionTrait>(
+//     db: &T,
+//     topic_ids: Vec<Uuid>,
+//     user_id: Uuid,
+// ) -> Result<Vec<topic::Model>, AppError> {
+//     let topics = topic::Entity::find()
+//         .filter(topic::Column::UserId.eq(user_id))
+//         .filter(topic::Column::TopicId.is_in(topic_ids))
+//         .all(db)
+//         .await?;
 
-    Ok(topics)
-}
+//     Ok(topics)
+// }
 
-pub async fn create_message_topic<T: ConnectionTrait>(
-    db: &T,
-    model: message_topic::Model,
-) -> Result<(), AppError> {
-    message_topic::Entity::insert(model.into_active_model())
-        .exec(db)
-        .await?;
-    Ok(())
-}
+// pub async fn create_message_topic<T: ConnectionTrait>(
+//     db: &T,
+//     model: message_topic::Model,
+// ) -> Result<(), AppError> {
+//     message_topic::Entity::insert(model.into_active_model())
+//         .exec(db)
+//         .await?;
+//     Ok(())
+// }
 
 pub async fn get_topics_by_message_id<T: ConnectionTrait>(
     db: &T,
@@ -185,16 +186,48 @@ pub async fn get_messages_by_stream_id<T: ConnectionTrait>(
 
 pub async fn increase_stream_messages_count<T: ConnectionTrait>(
     db: &T,
-    stream_id: Uuid,
+    message_id: Uuid,
 ) -> Result<(), AppError> {
     stream::Entity::update_many()
         .col_expr(
             stream::Column::MessagesCount,
             Expr::col(stream::Column::MessagesCount).add(1),
         )
-        .filter(stream::Column::StreamId.eq(stream_id))
+        .filter(stream::Column::MessageId.eq(message_id))
         .exec(db)
         .await?;
 
     Ok(())
+}
+
+pub async fn get_messages_users_by_user_id<T: ConnectionTrait>(
+    db: &T,
+    user_id: Uuid,
+    cursor_message_id: Option<Uuid>,
+    limit: u64,
+) -> Result<Vec<MessageUserModel>, AppError> {
+    let messages_users = message_user::Entity::find()
+        .filter(message_user::Column::UserId.eq(user_id))
+        .filter(message_user::Column::IsOwned.eq(true))
+        .apply_if(cursor_message_id, |query, v| {
+            query.filter(message_user::Column::MessageUserId.lte(v))
+        })
+        .order_by_desc(message_user::Column::MessageUserId)
+        .limit(limit)
+        .all(db)
+        .await?;
+
+    Ok(messages_users)
+}
+
+pub async fn get_streams_by_message_ids<T: ConnectionTrait>(
+    db: &T,
+    message_ids: Vec<Uuid>,
+) -> Result<Vec<StreamModel>, AppError> {
+    let streams = stream::Entity::find()
+        .filter(stream::Column::MessageId.is_in(message_ids))
+        .all(db)
+        .await?;
+
+    Ok(streams)
 }

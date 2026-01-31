@@ -11,9 +11,9 @@ endpoint = "0.0.0.0:4222"
 stream = "bzd"
 consumer = "bzd-messages"
 
-[messages]
-user_messages_limit = 5
-message_messages_limit = 5
+[messages.limits]
+user = 25
+message = 25
 
 [messages.events.message]
 subject = "bzd.messages.events.message"

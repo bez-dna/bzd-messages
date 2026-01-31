@@ -9,25 +9,16 @@ service MessagesService {
     rpc GetMessage(GetMessageRequest) returns (GetMessageResponse);
     rpc GetMessageMessages(GetMessageMessagesRequest)
         returns (GetMessageMessagesResponse);
+    rpc GetUserMessages(GetUserMessagesRequest)
+        returns (GetUserMessagesResponse);
+    rpc GetStreams(GetStreamsRequest) returns (GetStreamsResponse);
 }
 
 message CreateMessageRequest {
     optional string current_user_id = 100;
     optional string text = 101;
-    // optional string xxx = 102;
     optional string code = 103;
-    oneof tp {
-        Starting starting = 104;
-        Regular regular = 105;
-    }
-
-    message Starting {
-        repeated string topic_ids = 101;
-    }
-
-    message Regular {
-        optional string message_id = 101;
-    }
+    optional string message_id = 104;
 }
 
 message CreateMessageResponse {
@@ -78,4 +69,33 @@ message GetMessageMessagesRequest {
 message GetMessageMessagesResponse {
     repeated string message_ids = 101;
     optional string cursor_message_id = 102;
+}
+
+message GetUserMessagesRequest {
+    optional string user_id = 101;
+    optional string cursor_message_id = 102;
+}
+
+message GetUserMessagesResponse {
+    repeated string message_ids = 101;
+    optional string cursor_message_id = 102;
+}
+
+message GetStreamsRequest {
+    repeated string message_ids = 101;
+}
+
+message GetStreamsResponse {
+    repeated Stream streams = 501;
+
+    message Stream {
+        optional string stream_id = 101;
+        optional string message_id = 102;
+        optional string text = 103;
+        // repeated string user_ids = 104;
+        optional int64 messages_count = 105;
+
+        optional google.protobuf.Timestamp created_at = 901;
+        optional google.protobuf.Timestamp updated_at = 902;
+    }
 }

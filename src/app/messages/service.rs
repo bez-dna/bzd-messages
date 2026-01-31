@@ -6,7 +6,7 @@ use crate::app::{
     error::AppError,
     messages::{
         events,
-        repo::{self, MessageModel, MessageStreamModel, StreamUserModel},
+        repo::{self, MessageModel, MessageStreamModel, MessageUserModel},
         settings::MessagesSettings,
     },
 };
@@ -21,75 +21,56 @@ pub async fn create_message(
 
     let tx = db.begin().await?;
 
-    let message = MessageModel::new(current_user.user_id, req.text, req.code);
+    let message = MessageModel::new(current_user.user_id, req.text, req.code.to_string());
     let message = repo::create_message(&tx, message).await?;
 
-    let stream = match req.tp {
-        create_message::Type::TopicIds(topic_ids) => {
-            let topics =
-                repo::get_topics_by_ids_and_user_id(&tx, topic_ids.clone(), current_user.user_id)
-                    .await?;
+    if let Some(message_id) = req.message_id {
+        let source_message = repo::get_message_by_id(&tx, message_id).await?;
 
-            if topics.len() < 1 || topics.len() != topic_ids.len() {
-                return Err(AppError::Other);
-            }
+        let stream = repo::stream::Model::new(message_id, source_message.text.clone());
+        let stream = repo::create_stream(&tx, stream)
+            .await?
+            .ok_or(AppError::Unreachable)?;
 
-            for topic_id in topic_ids {
-                repo::create_message_topic(
-                    &tx,
-                    repo::message_topic::Model::new(message.message_id, topic_id),
-                )
-                .await?;
-            }
+        repo::create_message_stream(
+            &tx,
+            MessageStreamModel::new(source_message.message_id, stream.stream_id),
+        )
+        .await?;
 
-            None
-        }
-        create_message::Type::MessageId(message_id) => {
-            let source_message = repo::get_message_by_id(&tx, message_id).await?;
+        repo::create_message_stream(
+            &tx,
+            MessageStreamModel::new(message.message_id, stream.stream_id),
+        )
+        .await?;
 
-            // TODO: нужно воткнуть проверку чтобы не создавать 2 более уровень вложенности пока нет саммари.
+        repo::create_message_user(
+            &tx,
+            MessageUserModel::new(source_message.message_id, message.user_id, false),
+        )
+        .await?;
 
-            let stream = repo::stream::Model::new(message_id, source_message.text.clone());
-            let stream = repo::create_stream(&tx, stream)
-                .await?
-                .ok_or(AppError::Unreachable)?;
+        repo::create_message_user(
+            &tx,
+            MessageUserModel::new(source_message.message_id, source_message.user_id, false),
+        )
+        .await?;
 
-            repo::create_message_stream(
-                &tx,
-                MessageStreamModel::new(source_message.message_id, stream.stream_id),
-            )
-            .await?;
-
-            repo::create_message_stream(
-                &tx,
-                MessageStreamModel::new(message.message_id, stream.stream_id),
-            )
-            .await?;
-
-            repo::create_stream_user(
-                &tx,
-                StreamUserModel::new(stream.stream_id, current_user.user_id),
-            )
-            .await?;
-
-            repo::create_stream_user(
-                &tx,
-                StreamUserModel::new(stream.stream_id, source_message.user_id),
-            )
-            .await?;
-
-            Some(stream)
-        }
+        // TODO: скорее всего стоит вытащить из транзакции, т.к. это по сути неявный лок на запись,
+        // а если много юзеров будет постить в один стрим, это будет растягивать транзакцию, а это будет сильнее пул
+        // утилизировать
+        repo::increase_stream_messages_count(db, message_id).await?;
+    } else {
+        repo::create_message_user(
+            &tx,
+            MessageUserModel::new(message.message_id, message.user_id, true),
+        )
+        .await?;
     };
 
     tx.commit().await?;
 
     // TODO: нужно сделать чтобы оно не терялось (и инкриз и отсылку эвентов.. аутбокс?)
-
-    if let Some(stream) = stream.clone() {
-        repo::increase_stream_messages_count(db, stream.stream_id).await?;
-    }
-
     events::publish_message(db, js, &settings.events, message.message_id, Type::Created).await?;
 
     Ok(create_message::Response { message })
@@ -106,20 +87,12 @@ pub mod create_message {
         pub current_user: Option<CurrentUser>,
         #[validate(length(min = 2))]
         pub text: String,
-        #[validate(length(min = 2))]
-        pub code: String,
-        pub tp: Type,
-        // pub message_id: Option<Uuid>,
-    }
-
-    pub enum Type {
-        TopicIds(Vec<Uuid>),
-        MessageId(Uuid),
+        pub code: Uuid,
+        pub message_id: Option<Uuid>,
     }
 
     pub struct Response {
         pub message: message::Model,
-        // pub stream: Option<repo::stream::Model>,
     }
 }
 
@@ -177,7 +150,7 @@ pub async fn get_message_messages(
     let message = repo::get_message_by_id(db, req.message_id).await?;
     let stream = repo::find_stream_by_message_id(db, req.message_id).await?;
 
-    let limit = settings.message_messages_limit;
+    let limit = settings.limits.message;
 
     let mut messages = match stream {
         Some(stream) => {
@@ -219,5 +192,68 @@ pub mod get_message_messages {
     pub struct Response {
         pub messages: Vec<message::Model>,
         pub cursor_message: Option<message::Model>,
+    }
+}
+
+pub async fn get_user_messages(
+    db: &DbConn,
+    req: get_user_messages::Request,
+    settings: &MessagesSettings,
+) -> Result<get_user_messages::Response, AppError> {
+    let limit = settings.limits.user;
+
+    let mut messages_users =
+        repo::get_messages_users_by_user_id(db, req.user_id, req.cursor_message_id, limit + 1)
+            .await?;
+
+    let cursor_message_user =
+        if messages_users.len() > usize::try_from(limit).map_err(|_| AppError::Unreachable)? {
+            messages_users.pop()
+        } else {
+            None
+        };
+
+    Ok(get_user_messages::Response {
+        messages_users,
+        cursor_message_user,
+    })
+}
+
+pub mod get_user_messages {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::MessageUserModel;
+
+    pub struct Request {
+        pub user_id: Uuid,
+        pub cursor_message_id: Option<Uuid>,
+    }
+
+    pub struct Response {
+        pub messages_users: Vec<MessageUserModel>,
+        pub cursor_message_user: Option<MessageUserModel>,
+    }
+}
+
+pub async fn get_streams(
+    db: &DbConn,
+    req: get_streams::Request,
+) -> Result<get_streams::Response, AppError> {
+    let streams = repo::get_streams_by_message_ids(db, req.message_ids).await?;
+
+    Ok(get_streams::Response { streams })
+}
+
+pub mod get_streams {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::StreamModel;
+
+    pub struct Request {
+        pub message_ids: Vec<Uuid>,
+    }
+
+    pub struct Response {
+        pub streams: Vec<StreamModel>,
     }
 }
