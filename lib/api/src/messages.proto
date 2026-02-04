@@ -12,6 +12,8 @@ service MessagesService {
     rpc GetUserMessages(GetUserMessagesRequest)
         returns (GetUserMessagesResponse);
     rpc GetStreams(GetStreamsRequest) returns (GetStreamsResponse);
+    rpc GetMessagesUsers(GetMessagesUsersRequest)
+        returns (GetMessagesUsersResponse);
 }
 
 message CreateMessageRequest {
@@ -97,5 +99,22 @@ message GetStreamsResponse {
 
         optional google.protobuf.Timestamp created_at = 901;
         optional google.protobuf.Timestamp updated_at = 902;
+    }
+}
+
+message GetMessagesUsersRequest {
+    repeated string message_ids = 101;
+}
+
+message GetMessagesUsersResponse {
+    repeated MessageUser messages_users = 501;
+
+    message MessageUser {
+        optional string message_user_id = 101;
+        optional string message_id = 102;
+        optional string user_id = 103;
+
+        // optional google.protobuf.Timestamp created_at = 901;
+        // optional google.protobuf.Timestamp updated_at = 902;
     }
 }
