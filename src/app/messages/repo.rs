@@ -231,3 +231,15 @@ pub async fn get_streams_by_message_ids<T: ConnectionTrait>(
 
     Ok(streams)
 }
+
+pub async fn get_messages_users_by_message_ids<T: ConnectionTrait>(
+    db: &T,
+    message_ids: Vec<Uuid>,
+) -> Result<Vec<MessageUserModel>, AppError> {
+    let messages_users = message_user::Entity::find()
+        .filter(message_user::Column::MessageId.is_in(message_ids))
+        .all(db)
+        .await?;
+
+    Ok(messages_users)
+}

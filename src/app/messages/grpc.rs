@@ -1,8 +1,9 @@
 use bzd_messages_api::messages::{
     CreateMessageRequest, CreateMessageResponse, GetMessageMessagesRequest,
     GetMessageMessagesResponse, GetMessageRequest, GetMessageResponse, GetMessagesRequest,
-    GetMessagesResponse, GetStreamsRequest, GetStreamsResponse, GetUserMessagesRequest,
-    GetUserMessagesResponse, messages_service_server::MessagesService,
+    GetMessagesResponse, GetMessagesUsersRequest, GetMessagesUsersResponse, GetStreamsRequest,
+    GetStreamsResponse, GetUserMessagesRequest, GetUserMessagesResponse,
+    messages_service_server::MessagesService,
 };
 use tonic::{Request, Response, Status};
 
@@ -70,6 +71,15 @@ impl MessagesService for GrpcMessagesService {
         req: Request<GetStreamsRequest>,
     ) -> Result<Response<GetStreamsResponse>, Status> {
         let res = get_streams::handler(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(res))
+    }
+
+    async fn get_messages_users(
+        &self,
+        req: Request<GetMessagesUsersRequest>,
+    ) -> Result<Response<GetMessagesUsersResponse>, Status> {
+        let res = get_messages_users::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -422,6 +432,66 @@ mod get_streams {
                     seconds: stream.updated_at.and_utc().timestamp(),
                     nanos: 0,
                 }),
+            }
+        }
+    }
+}
+
+mod get_messages_users {
+    use bzd_messages_api::messages::{
+        GetMessagesUsersRequest, GetMessagesUsersResponse, get_messages_users_response,
+    };
+    use uuid::Uuid;
+
+    use crate::app::{
+        error::AppError,
+        messages::{
+            repo::MessageUserModel,
+            service::{
+                self,
+                get_messages_users::{Request, Response},
+            },
+            state::MessagesState,
+        },
+    };
+
+    pub async fn handler(
+        MessagesState { db, .. }: &MessagesState,
+        req: GetMessagesUsersRequest,
+    ) -> Result<GetMessagesUsersResponse, AppError> {
+        let res = service::get_messages_users(&db.conn, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
+
+    impl TryFrom<GetMessagesUsersRequest> for Request {
+        type Error = AppError;
+
+        fn try_from(req: GetMessagesUsersRequest) -> Result<Self, Self::Error> {
+            let message_ids = req
+                .message_ids
+                .iter()
+                .map(|it| it.parse())
+                .collect::<Result<Vec<Uuid>, _>>()?;
+
+            Ok(Self { message_ids })
+        }
+    }
+
+    impl From<Response> for GetMessagesUsersResponse {
+        fn from(res: Response) -> Self {
+            Self {
+                messages_users: res.messages_users.iter().map(Into::into).collect(),
+            }
+        }
+    }
+
+    impl From<&MessageUserModel> for get_messages_users_response::MessageUser {
+        fn from(message_user: &MessageUserModel) -> Self {
+            Self {
+                message_user_id: Some(message_user.message_user_id.into()),
+                message_id: Some(message_user.message_id.into()),
+                user_id: Some(message_user.user_id.into()),
             }
         }
     }
