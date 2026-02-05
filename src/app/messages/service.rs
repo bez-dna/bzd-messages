@@ -247,14 +247,14 @@ pub async fn get_streams(
 pub mod get_streams {
     use uuid::Uuid;
 
-    use crate::app::messages::repo::StreamModel;
+    use crate::app::messages::repo::{MessageUserModel, StreamModel};
 
     pub struct Request {
         pub message_ids: Vec<Uuid>,
     }
 
     pub struct Response {
-        pub streams: Vec<StreamModel>,
+        pub streams: Vec<(StreamModel, Vec<MessageUserModel>)>,
     }
 }
 

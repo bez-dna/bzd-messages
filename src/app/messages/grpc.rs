@@ -370,14 +370,15 @@ mod get_user_messages {
 }
 
 mod get_streams {
-    use bzd_messages_api::messages::{GetStreamsRequest, GetStreamsResponse, get_streams_response};
+    use bzd_messages_api::messages::{
+        GetStreamsRequest, GetStreamsResponse, get_streams_response::Stream,
+    };
     use prost_types::Timestamp;
     use uuid::Uuid;
 
     use crate::app::{
         error::AppError,
         messages::{
-            repo::StreamModel,
             service::{
                 self,
                 get_streams::{Request, Response},
@@ -412,26 +413,25 @@ mod get_streams {
     impl From<Response> for GetStreamsResponse {
         fn from(res: Response) -> Self {
             Self {
-                streams: res.streams.iter().map(Into::into).collect(),
-            }
-        }
-    }
-
-    impl From<&StreamModel> for get_streams_response::Stream {
-        fn from(stream: &StreamModel) -> Self {
-            Self {
-                stream_id: Some(stream.stream_id.into()),
-                message_id: Some(stream.message_id.into()),
-                text: stream.text.clone().into(),
-                messages_count: Some(stream.messages_count),
-                created_at: Some(Timestamp {
-                    seconds: stream.created_at.and_utc().timestamp(),
-                    nanos: 0,
-                }),
-                updated_at: Some(Timestamp {
-                    seconds: stream.updated_at.and_utc().timestamp(),
-                    nanos: 0,
-                }),
+                streams: res
+                    .streams
+                    .iter()
+                    .map(|(stream, messages_users)| Stream {
+                        stream_id: Some(stream.stream_id.into()),
+                        message_id: Some(stream.message_id.into()),
+                        text: stream.text.clone().into(),
+                        user_ids: messages_users.iter().map(|it| it.user_id.into()).collect(),
+                        messages_count: Some(stream.messages_count),
+                        created_at: Some(Timestamp {
+                            seconds: stream.created_at.and_utc().timestamp(),
+                            nanos: 0,
+                        }),
+                        updated_at: Some(Timestamp {
+                            seconds: stream.updated_at.and_utc().timestamp(),
+                            nanos: 0,
+                        }),
+                    })
+                    .collect(),
             }
         }
     }
