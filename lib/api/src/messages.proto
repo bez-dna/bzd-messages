@@ -66,7 +66,7 @@ message GetMessageResponse {
     }
 
     message Permissions {
-        optional bool topics_users = 101;
+        optional bool topics = 101;
     }
 }
 
