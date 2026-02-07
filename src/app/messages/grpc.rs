@@ -210,15 +210,19 @@ mod get_messages {
 }
 
 mod get_message {
-    use bzd_messages_api::messages::{GetMessageRequest, GetMessageResponse, get_message_response};
+    use bzd_messages_api::messages::{
+        GetMessageRequest, GetMessageResponse,
+        get_message_response::{self},
+    };
     use prost_types::Timestamp;
 
     use crate::app::{
+        current_user::CurrentUser,
         error::AppError,
         messages::{
             service::{
                 self,
-                get_message::{Request, Response},
+                get_message::{Permissions, Request, Response},
             },
             state::MessagesState,
         },
@@ -238,6 +242,7 @@ mod get_message {
 
         fn try_from(req: GetMessageRequest) -> Result<Self, Self::Error> {
             Ok(Self {
+                current_user: CurrentUser::new(&req.current_user_id)?,
                 message_id: req.message_id().parse()?,
             })
         }
@@ -253,6 +258,7 @@ mod get_message {
                     text: message.text.clone().into(),
                     user_id: Some(message.user_id.into()),
                     code: message.code.clone().into(),
+                    permissions: Some(res.permissions.into()),
                     created_at: Some(Timestamp {
                         seconds: message.created_at.and_utc().timestamp(),
                         nanos: 0,
@@ -262,6 +268,14 @@ mod get_message {
                         nanos: 0,
                     }),
                 }),
+            }
+        }
+    }
+
+    impl From<Permissions> for get_message_response::Permissions {
+        fn from(permissions: Permissions) -> Self {
+            Self {
+                topics_users: Some(permissions.topics_users),
             }
         }
     }
