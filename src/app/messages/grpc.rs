@@ -275,7 +275,7 @@ mod get_message {
     impl From<Permissions> for get_message_response::Permissions {
         fn from(permissions: Permissions) -> Self {
             Self {
-                topics_users: Some(permissions.topics_users),
+                topics: Some(permissions.topics),
             }
         }
     }

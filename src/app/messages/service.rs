@@ -126,7 +126,7 @@ pub async fn get_message(
 ) -> Result<get_message::Response, AppError> {
     let message = repo::get_message_by_id(db, req.message_id).await?;
     let permissions = Permissions {
-        topics_users: req
+        topics: req
             .current_user
             .is_some_and(|current_user| current_user.user_id == message.user_id),
     };
@@ -148,7 +148,7 @@ pub mod get_message {
     }
 
     pub struct Permissions {
-        pub topics_users: bool,
+        pub topics: bool,
     }
 
     pub struct Response {
