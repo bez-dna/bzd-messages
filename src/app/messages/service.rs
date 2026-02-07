@@ -7,6 +7,7 @@ use crate::app::{
     messages::{
         events,
         repo::{self, MessageModel, MessageStreamModel, MessageUserModel},
+        service::get_message::Permissions,
         settings::MessagesSettings,
     },
 };
@@ -108,14 +109,14 @@ pub async fn get_messages(
 pub mod get_messages {
     use uuid::Uuid;
 
-    use crate::app::messages::repo::message;
+    use crate::app::messages::repo::MessageModel;
 
     pub struct Request {
         pub message_ids: Vec<Uuid>,
     }
 
     pub struct Response {
-        pub messages: Vec<message::Model>,
+        pub messages: Vec<MessageModel>,
     }
 }
 
@@ -124,21 +125,35 @@ pub async fn get_message(
     req: get_message::Request,
 ) -> Result<get_message::Response, AppError> {
     let message = repo::get_message_by_id(db, req.message_id).await?;
+    let permissions = Permissions {
+        topics_users: req
+            .current_user
+            .is_some_and(|current_user| current_user.user_id == message.user_id),
+    };
 
-    Ok(get_message::Response { message })
+    Ok(get_message::Response {
+        message,
+        permissions,
+    })
 }
 
 pub mod get_message {
     use uuid::Uuid;
 
-    use crate::app::messages::repo::message;
+    use crate::app::{current_user::CurrentUser, messages::repo::MessageModel};
 
     pub struct Request {
+        pub current_user: Option<CurrentUser>,
         pub message_id: Uuid,
     }
 
+    pub struct Permissions {
+        pub topics_users: bool,
+    }
+
     pub struct Response {
-        pub message: message::Model,
+        pub message: MessageModel,
+        pub permissions: Permissions,
     }
 }
 
