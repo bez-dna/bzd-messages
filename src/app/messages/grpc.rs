@@ -2,9 +2,9 @@ use bzd_messages_api::messages::{
     CreateMessageRequest, CreateMessageResponse, CreateMessageTopicRequest,
     CreateMessageTopicResponse, DeleteMessageTopicRequest, DeleteMessageTopicResponse,
     GetMessageMessagesRequest, GetMessageMessagesResponse, GetMessageRequest, GetMessageResponse,
-    GetMessagesRequest, GetMessagesResponse, GetMessagesUsersRequest, GetMessagesUsersResponse,
-    GetStreamsRequest, GetStreamsResponse, GetUserMessagesRequest, GetUserMessagesResponse,
-    messages_service_server::MessagesService,
+    GetMessagesRequest, GetMessagesResponse, GetMessagesTopicsRequest, GetMessagesTopicsResponse,
+    GetMessagesUsersRequest, GetMessagesUsersResponse, GetStreamsRequest, GetStreamsResponse,
+    GetUserMessagesRequest, GetUserMessagesResponse, messages_service_server::MessagesService,
 };
 use tonic::{Request, Response, Status};
 
@@ -81,6 +81,15 @@ impl MessagesService for GrpcMessagesService {
         req: Request<GetMessagesUsersRequest>,
     ) -> Result<Response<GetMessagesUsersResponse>, Status> {
         let res = get_messages_users::handler(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(res))
+    }
+
+    async fn get_messages_topics(
+        &self,
+        req: Request<GetMessagesTopicsRequest>,
+    ) -> Result<Response<GetMessagesTopicsResponse>, Status> {
+        let res = get_messages_topics::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -525,6 +534,66 @@ mod get_messages_users {
                 message_user_id: Some(message_user.message_user_id.into()),
                 message_id: Some(message_user.message_id.into()),
                 user_id: Some(message_user.user_id.into()),
+            }
+        }
+    }
+}
+
+mod get_messages_topics {
+    use bzd_messages_api::messages::{
+        GetMessagesTopicsRequest, GetMessagesTopicsResponse, get_messages_topics_response,
+    };
+    use uuid::Uuid;
+
+    use crate::app::{
+        error::AppError,
+        messages::{
+            repo::MessageTopicModel,
+            service::{
+                self,
+                get_messages_topics::{Request, Response},
+            },
+            state::MessagesState,
+        },
+    };
+
+    pub async fn handler(
+        MessagesState { db, .. }: &MessagesState,
+        req: GetMessagesTopicsRequest,
+    ) -> Result<GetMessagesTopicsResponse, AppError> {
+        let res = service::get_messages_topics(&db.conn, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
+
+    impl TryFrom<GetMessagesTopicsRequest> for Request {
+        type Error = AppError;
+
+        fn try_from(req: GetMessagesTopicsRequest) -> Result<Self, Self::Error> {
+            let message_ids = req
+                .message_ids
+                .iter()
+                .map(|it| it.parse())
+                .collect::<Result<Vec<Uuid>, _>>()?;
+
+            Ok(Self { message_ids })
+        }
+    }
+
+    impl From<Response> for GetMessagesTopicsResponse {
+        fn from(res: Response) -> Self {
+            Self {
+                messages_topics: res.messages_topics.iter().map(Into::into).collect(),
+            }
+        }
+    }
+
+    impl From<&MessageTopicModel> for get_messages_topics_response::MessageTopic {
+        fn from(message_user: &MessageTopicModel) -> Self {
+            Self {
+                message_topic_id: Some(message_user.message_topic_id.into()),
+                message_id: Some(message_user.message_id.into()),
+                topic_id: Some(message_user.topic_id.into()),
             }
         }
     }

@@ -14,6 +14,8 @@ service MessagesService {
     rpc GetStreams(GetStreamsRequest) returns (GetStreamsResponse);
     rpc GetMessagesUsers(GetMessagesUsersRequest)
         returns (GetMessagesUsersResponse);
+    rpc GetMessagesTopics(GetMessagesTopicsRequest)
+        returns (GetMessagesTopicsResponse);
     rpc CreateMessageTopic(CreateMessageTopicRequest)
         returns (CreateMessageTopicResponse);
     rpc DeleteMessageTopic(DeleteMessageTopicRequest)
@@ -146,3 +148,17 @@ message DeleteMessageTopicRequest {
 }
 
 message DeleteMessageTopicResponse {}
+
+message GetMessagesTopicsRequest {
+    repeated string message_ids = 101;
+}
+
+message GetMessagesTopicsResponse {
+    repeated MessageTopic messages_topics = 501;
+
+    message MessageTopic {
+        optional string message_topic_id = 101;
+        optional string message_id = 102;
+        optional string topic_id = 103;
+    }
+}
