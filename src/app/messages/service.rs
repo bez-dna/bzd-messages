@@ -298,8 +298,8 @@ pub mod get_messages_users {
 
 pub async fn create_message_topic(
     db: &DbConn,
-    // js: &Context,
-    // settings: &MessagesSettings,
+    js: &Context,
+    settings: &MessagesSettings,
     req: create_message_topic::Request,
 ) -> Result<create_message_topic::Response, AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
@@ -315,6 +315,8 @@ pub async fn create_message_topic(
         MessageTopicModel::new(message.message_id, topic.topic_id),
     )
     .await?;
+
+    events::message_topic(js, &settings.events, &message_topic, Type::Created).await?;
 
     Ok(create_message_topic::Response { message_topic })
 }
@@ -334,5 +336,35 @@ pub mod create_message_topic {
 
     pub struct Response {
         pub message_topic: MessageTopicModel,
+    }
+}
+
+pub async fn delete_message_topic(
+    db: &DbConn,
+    js: &Context,
+    settings: &MessagesSettings,
+    req: delete_message_topic::Request,
+) -> Result<(), AppError> {
+    let current_user = req.current_user.ok_or(AppError::Forbidden)?;
+
+    let message_topic = repo::get_message_topic_by_id(db, req.message_topic_id).await?;
+    let message = repo::get_message_by_id(db, message_topic.message_id).await?;
+    current_user.check_access(message.user_id)?;
+
+    repo::delete_message_topic(db, message_topic.clone()).await?;
+
+    events::message_topic(js, &settings.events, &message_topic, Type::Deleted).await?;
+
+    Ok(())
+}
+
+pub mod delete_message_topic {
+    use uuid::Uuid;
+
+    use crate::app::current_user::CurrentUser;
+
+    pub struct Request {
+        pub current_user: Option<CurrentUser>,
+        pub message_topic_id: Uuid,
     }
 }

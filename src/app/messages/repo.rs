@@ -1,7 +1,7 @@
 use sea_orm::{
     ActiveModelTrait as _, ColumnTrait as _, ConnectionTrait, EntityTrait as _,
-    IntoActiveModel as _, JoinType, QueryFilter as _, QueryOrder as _, QuerySelect as _,
-    QueryTrait as _, prelude::Expr, sea_query::OnConflict,
+    IntoActiveModel as _, JoinType, ModelTrait as _, QueryFilter as _, QueryOrder as _,
+    QuerySelect as _, QueryTrait as _, prelude::Expr, sea_query::OnConflict,
 };
 use uuid::Uuid;
 
@@ -289,4 +289,25 @@ pub async fn create_message_topic<T: ConnectionTrait>(
         .ok_or(AppError::Unreachable)?;
 
     Ok(message_topic)
+}
+
+pub async fn get_message_topic_by_id<T: ConnectionTrait>(
+    db: &T,
+    message_topic_id: Uuid,
+) -> Result<MessageTopicModel, AppError> {
+    let message_topic = message_topic::Entity::find_by_id(message_topic_id)
+        .one(db)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    Ok(message_topic)
+}
+
+pub async fn delete_message_topic<T: ConnectionTrait>(
+    db: &T,
+    message_topic: MessageTopicModel,
+) -> Result<(), AppError> {
+    message_topic.delete(db).await?;
+
+    Ok(())
 }

@@ -16,6 +16,8 @@ service MessagesService {
         returns (GetMessagesUsersResponse);
     rpc CreateMessageTopic(CreateMessageTopicRequest)
         returns (CreateMessageTopicResponse);
+    rpc DeleteMessageTopic(DeleteMessageTopicRequest)
+        returns (DeleteMessageTopicResponse);
 }
 
 message CreateMessageRequest {
@@ -137,3 +139,10 @@ message CreateMessageTopicRequest {
 message CreateMessageTopicResponse {
     optional string message_topic_id = 101;
 }
+
+message DeleteMessageTopicRequest {
+    optional string current_user_id = 100;
+    optional string message_topic_id = 101;
+}
+
+message DeleteMessageTopicResponse {}

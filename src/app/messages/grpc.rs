@@ -1,9 +1,10 @@
 use bzd_messages_api::messages::{
     CreateMessageRequest, CreateMessageResponse, CreateMessageTopicRequest,
-    CreateMessageTopicResponse, GetMessageMessagesRequest, GetMessageMessagesResponse,
-    GetMessageRequest, GetMessageResponse, GetMessagesRequest, GetMessagesResponse,
-    GetMessagesUsersRequest, GetMessagesUsersResponse, GetStreamsRequest, GetStreamsResponse,
-    GetUserMessagesRequest, GetUserMessagesResponse, messages_service_server::MessagesService,
+    CreateMessageTopicResponse, DeleteMessageTopicRequest, DeleteMessageTopicResponse,
+    GetMessageMessagesRequest, GetMessageMessagesResponse, GetMessageRequest, GetMessageResponse,
+    GetMessagesRequest, GetMessagesResponse, GetMessagesUsersRequest, GetMessagesUsersResponse,
+    GetStreamsRequest, GetStreamsResponse, GetUserMessagesRequest, GetUserMessagesResponse,
+    messages_service_server::MessagesService,
 };
 use tonic::{Request, Response, Status};
 
@@ -91,6 +92,15 @@ impl MessagesService for GrpcMessagesService {
         let res = create_message_topic::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
+    }
+
+    async fn delete_message_topic(
+        &self,
+        req: Request<DeleteMessageTopicRequest>,
+    ) -> Result<Response<DeleteMessageTopicResponse>, Status> {
+        delete_message_topic::handler(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(DeleteMessageTopicResponse::default()))
     }
 }
 
@@ -536,10 +546,13 @@ mod create_message_topic {
     };
 
     pub async fn handler(
-        MessagesState { db, .. }: &MessagesState,
+        MessagesState {
+            db, mess, settings, ..
+        }: &MessagesState,
         req: CreateMessageTopicRequest,
     ) -> Result<CreateMessageTopicResponse, AppError> {
-        let res = service::create_message_topic(&db.conn, req.try_into()?).await?;
+        let res =
+            service::create_message_topic(&db.conn, &mess.js, settings, req.try_into()?).await?;
 
         Ok(res.into())
     }
@@ -561,6 +574,41 @@ mod create_message_topic {
             Self {
                 message_topic_id: Some(res.message_topic.message_topic_id.into()),
             }
+        }
+    }
+}
+
+mod delete_message_topic {
+    use bzd_messages_api::messages::DeleteMessageTopicRequest;
+
+    use crate::app::{
+        current_user::CurrentUser,
+        error::AppError,
+        messages::{
+            service::{self, delete_message_topic::Request},
+            state::MessagesState,
+        },
+    };
+
+    pub async fn handler(
+        MessagesState {
+            db, mess, settings, ..
+        }: &MessagesState,
+        req: DeleteMessageTopicRequest,
+    ) -> Result<(), AppError> {
+        service::delete_message_topic(&db.conn, &mess.js, settings, req.try_into()?).await?;
+
+        Ok(())
+    }
+
+    impl TryFrom<DeleteMessageTopicRequest> for Request {
+        type Error = AppError;
+
+        fn try_from(req: DeleteMessageTopicRequest) -> Result<Self, Self::Error> {
+            Ok(Self {
+                current_user: CurrentUser::new(&req.current_user_id)?,
+                message_topic_id: req.message_topic_id().parse()?,
+            })
         }
     }
 }

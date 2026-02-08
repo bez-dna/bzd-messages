@@ -10,6 +10,7 @@ use crate::app::state::AppState;
 mod current_user;
 mod db;
 mod error;
+mod grpc;
 mod mess;
 mod messages;
 mod settings;
