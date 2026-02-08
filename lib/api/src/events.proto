@@ -22,3 +22,12 @@ message TopicUser {
     optional google.protobuf.Timestamp created_at = 901;
     optional google.protobuf.Timestamp updated_at = 902;
 }
+
+message MessageTopic {
+    optional string message_topic_id = 101;
+    optional string message_id = 102;
+    optional string topic_id = 103;
+
+    optional google.protobuf.Timestamp created_at = 901;
+    optional google.protobuf.Timestamp updated_at = 902;
+}

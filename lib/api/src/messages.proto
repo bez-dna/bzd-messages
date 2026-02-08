@@ -14,6 +14,10 @@ service MessagesService {
     rpc GetStreams(GetStreamsRequest) returns (GetStreamsResponse);
     rpc GetMessagesUsers(GetMessagesUsersRequest)
         returns (GetMessagesUsersResponse);
+    rpc CreateMessageTopic(CreateMessageTopicRequest)
+        returns (CreateMessageTopicResponse);
+    rpc DeleteMessageTopic(DeleteMessageTopicRequest)
+        returns (DeleteMessageTopicResponse);
 }
 
 message CreateMessageRequest {
@@ -125,3 +129,20 @@ message GetMessagesUsersResponse {
         // optional google.protobuf.Timestamp updated_at = 902;
     }
 }
+
+message CreateMessageTopicRequest {
+    optional string current_user_id = 100;
+    optional string message_id = 101;
+    optional string topic_id = 102;
+}
+
+message CreateMessageTopicResponse {
+    optional string message_topic_id = 101;
+}
+
+message DeleteMessageTopicRequest {
+    optional string current_user_id = 100;
+    optional string message_topic_id = 101;
+}
+
+message DeleteMessageTopicResponse {}

@@ -11,10 +11,16 @@ pub struct MessagesSettings {
 #[derive(Deserialize, Clone)]
 pub struct EventsSettings {
     pub message: MessageSettings,
+    pub message_topic: MessageTopicSettings,
 }
 
 #[derive(Deserialize, Clone)]
 pub struct MessageSettings {
+    pub subject: String,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct MessageTopicSettings {
     pub subject: String,
 }
 

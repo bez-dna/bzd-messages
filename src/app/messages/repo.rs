@@ -1,7 +1,7 @@
 use sea_orm::{
     ActiveModelTrait as _, ColumnTrait as _, ConnectionTrait, EntityTrait as _,
-    IntoActiveModel as _, JoinType, QueryFilter as _, QueryOrder as _, QuerySelect as _,
-    QueryTrait as _, prelude::Expr, sea_query::OnConflict,
+    IntoActiveModel as _, JoinType, ModelTrait as _, QueryFilter as _, QueryOrder as _,
+    QuerySelect as _, QueryTrait as _, prelude::Expr, sea_query::OnConflict,
 };
 use uuid::Uuid;
 
@@ -17,14 +17,14 @@ pub mod topic;
 pub type MessageModel = message::Model;
 pub type TopicModel = topic::Model;
 pub type MessageStreamModel = message_stream::Model;
-// pub type MessageTopic = message_topic::Model;
+pub type MessageTopicModel = message_topic::Model;
 pub type MessageUserModel = message_user::Model;
 pub type StreamModel = stream::Model;
 
 pub async fn create_message<T: ConnectionTrait>(
     db: &T,
-    model: message::Model,
-) -> Result<message::Model, AppError> {
+    model: MessageModel,
+) -> Result<MessageModel, AppError> {
     let message = model.into_active_model().insert(db).await?;
 
     Ok(message)
@@ -33,7 +33,7 @@ pub async fn create_message<T: ConnectionTrait>(
 pub async fn get_message_by_id<T: ConnectionTrait>(
     db: &T,
     message_id: Uuid,
-) -> Result<message::Model, AppError> {
+) -> Result<MessageModel, AppError> {
     let message = message::Entity::find_by_id(message_id)
         .one(db)
         .await?
@@ -250,4 +250,64 @@ pub async fn get_messages_users_by_message_ids<T: ConnectionTrait>(
         .await?;
 
     Ok(messages_users)
+}
+
+pub async fn get_topic_by_id<T: ConnectionTrait>(
+    db: &T,
+    topic_id: Uuid,
+) -> Result<TopicModel, AppError> {
+    let topic = topic::Entity::find_by_id(topic_id)
+        .one(db)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    Ok(topic)
+}
+
+pub async fn create_message_topic<T: ConnectionTrait>(
+    db: &T,
+    model: MessageTopicModel,
+) -> Result<MessageTopicModel, AppError> {
+    message_topic::Entity::insert(model.clone().into_active_model())
+        .on_conflict(
+            OnConflict::columns([
+                message_topic::Column::MessageId,
+                message_topic::Column::TopicId,
+            ])
+            .do_nothing()
+            .to_owned(),
+        )
+        .do_nothing()
+        .exec(db)
+        .await?;
+
+    let message_topic = message_topic::Entity::find()
+        .filter(message_topic::Column::TopicId.eq(model.topic_id))
+        .filter(message_topic::Column::MessageId.eq(model.message_id))
+        .one(db)
+        .await?
+        .ok_or(AppError::Unreachable)?;
+
+    Ok(message_topic)
+}
+
+pub async fn get_message_topic_by_id<T: ConnectionTrait>(
+    db: &T,
+    message_topic_id: Uuid,
+) -> Result<MessageTopicModel, AppError> {
+    let message_topic = message_topic::Entity::find_by_id(message_topic_id)
+        .one(db)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    Ok(message_topic)
+}
+
+pub async fn delete_message_topic<T: ConnectionTrait>(
+    db: &T,
+    message_topic: MessageTopicModel,
+) -> Result<(), AppError> {
+    message_topic.delete(db).await?;
+
+    Ok(())
 }
