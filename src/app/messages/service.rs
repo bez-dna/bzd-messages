@@ -296,6 +296,29 @@ pub mod get_messages_users {
     }
 }
 
+pub async fn get_messages_topics(
+    db: &DbConn,
+    req: get_messages_topics::Request,
+) -> Result<get_messages_topics::Response, AppError> {
+    let messages_topics = repo::get_messages_topics_by_message_ids(db, req.message_ids).await?;
+
+    Ok(get_messages_topics::Response { messages_topics })
+}
+
+pub mod get_messages_topics {
+    use uuid::Uuid;
+
+    use crate::app::messages::repo::MessageTopicModel;
+
+    pub struct Request {
+        pub message_ids: Vec<Uuid>,
+    }
+
+    pub struct Response {
+        pub messages_topics: Vec<MessageTopicModel>,
+    }
+}
+
 pub async fn create_message_topic(
     db: &DbConn,
     js: &Context,

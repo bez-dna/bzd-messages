@@ -264,6 +264,18 @@ pub async fn get_topic_by_id<T: ConnectionTrait>(
     Ok(topic)
 }
 
+pub async fn get_messages_topics_by_message_ids<T: ConnectionTrait>(
+    db: &T,
+    message_ids: Vec<Uuid>,
+) -> Result<Vec<MessageTopicModel>, AppError> {
+    let messages_topics = message_topic::Entity::find()
+        .filter(message_topic::Column::MessageId.is_in(message_ids))
+        .all(db)
+        .await?;
+
+    Ok(messages_topics)
+}
+
 pub async fn create_message_topic<T: ConnectionTrait>(
     db: &T,
     model: MessageTopicModel,
