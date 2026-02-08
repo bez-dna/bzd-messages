@@ -1,9 +1,9 @@
 use bzd_messages_api::messages::{
-    CreateMessageRequest, CreateMessageResponse, GetMessageMessagesRequest,
-    GetMessageMessagesResponse, GetMessageRequest, GetMessageResponse, GetMessagesRequest,
-    GetMessagesResponse, GetMessagesUsersRequest, GetMessagesUsersResponse, GetStreamsRequest,
-    GetStreamsResponse, GetUserMessagesRequest, GetUserMessagesResponse,
-    messages_service_server::MessagesService,
+    CreateMessageRequest, CreateMessageResponse, CreateMessageTopicRequest,
+    CreateMessageTopicResponse, GetMessageMessagesRequest, GetMessageMessagesResponse,
+    GetMessageRequest, GetMessageResponse, GetMessagesRequest, GetMessagesResponse,
+    GetMessagesUsersRequest, GetMessagesUsersResponse, GetStreamsRequest, GetStreamsResponse,
+    GetUserMessagesRequest, GetUserMessagesResponse, messages_service_server::MessagesService,
 };
 use tonic::{Request, Response, Status};
 
@@ -80,6 +80,15 @@ impl MessagesService for GrpcMessagesService {
         req: Request<GetMessagesUsersRequest>,
     ) -> Result<Response<GetMessagesUsersResponse>, Status> {
         let res = get_messages_users::handler(&self.state, req.into_inner()).await?;
+
+        Ok(Response::new(res))
+    }
+
+    async fn create_message_topic(
+        &self,
+        req: Request<CreateMessageTopicRequest>,
+    ) -> Result<Response<CreateMessageTopicResponse>, Status> {
+        let res = create_message_topic::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -506,6 +515,51 @@ mod get_messages_users {
                 message_user_id: Some(message_user.message_user_id.into()),
                 message_id: Some(message_user.message_id.into()),
                 user_id: Some(message_user.user_id.into()),
+            }
+        }
+    }
+}
+
+mod create_message_topic {
+    use bzd_messages_api::messages::{CreateMessageTopicRequest, CreateMessageTopicResponse};
+
+    use crate::app::{
+        current_user::CurrentUser,
+        error::AppError,
+        messages::{
+            service::{
+                self,
+                create_message_topic::{Request, Response},
+            },
+            state::MessagesState,
+        },
+    };
+
+    pub async fn handler(
+        MessagesState { db, .. }: &MessagesState,
+        req: CreateMessageTopicRequest,
+    ) -> Result<CreateMessageTopicResponse, AppError> {
+        let res = service::create_message_topic(&db.conn, req.try_into()?).await?;
+
+        Ok(res.into())
+    }
+
+    impl TryFrom<CreateMessageTopicRequest> for Request {
+        type Error = AppError;
+
+        fn try_from(req: CreateMessageTopicRequest) -> Result<Self, Self::Error> {
+            Ok(Self {
+                current_user: CurrentUser::new(&req.current_user_id)?,
+                message_id: req.message_id().parse()?,
+                topic_id: req.topic_id().parse()?,
+            })
+        }
+    }
+
+    impl From<Response> for CreateMessageTopicResponse {
+        fn from(res: Response) -> Self {
+            Self {
+                message_topic_id: Some(res.message_topic.message_topic_id.into()),
             }
         }
     }

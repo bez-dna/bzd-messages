@@ -6,7 +6,7 @@ use crate::app::{
     error::AppError,
     messages::{
         events,
-        repo::{self, MessageModel, MessageStreamModel, MessageUserModel},
+        repo::{self, MessageModel, MessageStreamModel, MessageTopicModel, MessageUserModel},
         service::get_message::Permissions,
         settings::MessagesSettings,
     },
@@ -293,5 +293,46 @@ pub mod get_messages_users {
 
     pub struct Response {
         pub messages_users: Vec<MessageUserModel>,
+    }
+}
+
+pub async fn create_message_topic(
+    db: &DbConn,
+    // js: &Context,
+    // settings: &MessagesSettings,
+    req: create_message_topic::Request,
+) -> Result<create_message_topic::Response, AppError> {
+    let current_user = req.current_user.ok_or(AppError::Forbidden)?;
+
+    let message = repo::get_message_by_id(db, req.message_id).await?;
+    current_user.check_access(message.user_id)?;
+
+    let topic = repo::get_topic_by_id(db, req.topic_id).await?;
+    current_user.check_access(topic.user_id)?;
+
+    let message_topic = repo::create_message_topic(
+        db,
+        MessageTopicModel::new(message.message_id, topic.topic_id),
+    )
+    .await?;
+
+    Ok(create_message_topic::Response { message_topic })
+}
+
+pub mod create_message_topic {
+    use uuid::Uuid;
+    use validator::Validate;
+
+    use crate::app::{current_user::CurrentUser, messages::repo::MessageTopicModel};
+
+    #[derive(Validate)]
+    pub struct Request {
+        pub current_user: Option<CurrentUser>,
+        pub message_id: Uuid,
+        pub topic_id: Uuid,
+    }
+
+    pub struct Response {
+        pub message_topic: MessageTopicModel,
     }
 }
