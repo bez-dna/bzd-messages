@@ -198,6 +198,10 @@ pub async fn create_topic_user(
 
     let topic = repo::get_topic_by_id(db, req.topic_id).await?;
 
+    if topic.user_id == current_user.user_id {
+        return Err(AppError::Forbidden);
+    }
+
     let topic_user = repo::create_topic_user(
         db,
         TopicUserModel::new(current_user.user_id, topic.topic_id),
