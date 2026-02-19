@@ -14,7 +14,7 @@ pub async fn topic_user(
     topic_user: &TopicUserModel,
     tp: Type,
 ) -> Result<(), AppError> {
-    let subject = settings.topic_user.subject.clone();
+    let subject = settings.topics_users.subject.clone();
     let mut buf = BytesMut::new();
     let payload: bzd_messages_api::events::TopicUser = topic_user.into();
     payload.encode(&mut buf)?;

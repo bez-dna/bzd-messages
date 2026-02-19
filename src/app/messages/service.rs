@@ -14,8 +14,8 @@ use crate::app::{
 
 pub async fn create_message(
     db: &DbConn,
-    js: &Context,
-    settings: &MessagesSettings,
+    _js: &Context,
+    _settings: &MessagesSettings,
     req: create_message::Request,
 ) -> Result<create_message::Response, AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
@@ -72,7 +72,7 @@ pub async fn create_message(
     tx.commit().await?;
 
     // TODO: нужно сделать чтобы оно не терялось (и инкриз и отсылку эвентов.. аутбокс?)
-    events::publish_message(db, js, &settings.events, message.message_id, Type::Created).await?;
+    // events::publish_message(db, js, &settings.events, message.message_id, Type::Created).await?;
 
     Ok(create_message::Response { message })
 }
