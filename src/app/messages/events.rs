@@ -1,6 +1,6 @@
 use async_nats::{HeaderMap, jetstream::Context};
 use bytes::BytesMut;
-use bzd_messages_api::events::message::Type;
+use bzd_messages_api::events::message_topic::Type;
 use prost::Message;
 
 use crate::app::{

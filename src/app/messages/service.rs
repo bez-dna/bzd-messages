@@ -1,5 +1,5 @@
 use async_nats::jetstream::Context;
-use bzd_messages_api::events::message::Type;
+use bzd_messages_api::events::message_topic::Type;
 use sea_orm::{DbConn, TransactionTrait as _};
 
 use crate::app::{
