@@ -1,6 +1,6 @@
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait as _, ConnectionTrait, EntityTrait as _, IntoActiveModel as _,
-    ModelTrait, QueryFilter as _, sea_query::OnConflict,
+    ColumnTrait as _, ConnectionTrait, EntityTrait as _, IntoActiveModel as _, ModelTrait,
+    QueryFilter as _, sea_query::OnConflict,
 };
 use uuid::Uuid;
 
@@ -16,7 +16,25 @@ pub async fn create_topic<T: ConnectionTrait>(
     db: &T,
     model: TopicModel,
 ) -> Result<TopicModel, AppError> {
-    let topic = model.into_active_model().insert(db).await?;
+    let code = model.code.clone();
+    let user_id = model.user_id;
+
+    topic::Entity::insert(model.into_active_model())
+        .on_conflict(
+            OnConflict::columns([topic::Column::Code, topic::Column::UserId])
+                .do_nothing()
+                .to_owned(),
+        )
+        .do_nothing()
+        .exec(db)
+        .await?;
+
+    let topic = topic::Entity::find()
+        .filter(topic::Column::Code.eq(code))
+        .filter(topic::Column::UserId.eq(user_id))
+        .one(db)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
     Ok(topic)
 }

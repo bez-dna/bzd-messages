@@ -8,12 +8,13 @@ pub struct Model {
     pub topic_id: Uuid,
     pub user_id: Uuid,
     pub title: String,
+    pub code: String,
     pub created_at: DateTime,
     pub updated_at: DateTime,
 }
 
 impl Model {
-    pub fn new(user_id: Uuid, title: String) -> Self {
+    pub fn new(user_id: Uuid, title: String, code: String) -> Self {
         let now = Utc::now().naive_utc();
         let topic_id = Uuid::now_v7();
 
@@ -21,6 +22,7 @@ impl Model {
             topic_id,
             user_id,
             title,
+            code,
             created_at: now,
             updated_at: now,
         }
@@ -28,7 +30,7 @@ impl Model {
 
     #[cfg(test)]
     pub fn stub() -> Self {
-        Model::new(Uuid::now_v7(), "TITLE".into())
+        Model::new(Uuid::now_v7(), "TITLE".into(), "fire".into())
     }
 }
 

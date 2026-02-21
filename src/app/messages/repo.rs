@@ -103,49 +103,6 @@ pub async fn create_message_user<T: ConnectionTrait>(
     Ok(())
 }
 
-// pub async fn get_topics_by_ids_and_user_id<T: ConnectionTrait>(
-//     db: &T,
-//     topic_ids: Vec<Uuid>,
-//     user_id: Uuid,
-// ) -> Result<Vec<topic::Model>, AppError> {
-//     let topics = topic::Entity::find()
-//         .filter(topic::Column::UserId.eq(user_id))
-//         .filter(topic::Column::TopicId.is_in(topic_ids))
-//         .all(db)
-//         .await?;
-
-//     Ok(topics)
-// }
-
-// pub async fn create_message_topic<T: ConnectionTrait>(
-//     db: &T,
-//     model: message_topic::Model,
-// ) -> Result<(), AppError> {
-//     message_topic::Entity::insert(model.into_active_model())
-//         .exec(db)
-//         .await?;
-//     Ok(())
-// }
-
-pub async fn get_topics_by_message_id<T: ConnectionTrait>(
-    db: &T,
-    message_id: Uuid,
-) -> Result<Vec<topic::Model>, AppError> {
-    let topics = topic::Entity::find()
-        .join(
-            JoinType::InnerJoin,
-            topic::Entity::belongs_to(message_topic::Entity)
-                .to(message_topic::Column::TopicId)
-                .from(topic::Column::TopicId)
-                .into(),
-        )
-        .filter(message_topic::Column::MessageId.eq(message_id))
-        .all(db)
-        .await?;
-
-    Ok(topics)
-}
-
 pub async fn find_stream_by_message_id<T: ConnectionTrait>(
     db: &T,
     message_id: Uuid,

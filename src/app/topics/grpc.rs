@@ -1,8 +1,9 @@
 use bzd_messages_api::topics::{
     CreateTopicRequest, CreateTopicResponse, CreateTopicUserRequest, CreateTopicUserResponse,
-    DeleteTopicUserRequest, DeleteTopicUserResponse, GetTopicRequest, GetTopicResponse,
-    GetTopicsRequest, GetTopicsResponse, GetTopicsUsersRequest, GetTopicsUsersResponse,
-    GetUserTopicsRequest, GetUserTopicsResponse, topics_service_server::TopicsService,
+    DeleteTopicUserRequest, DeleteTopicUserResponse, GetEmojisRequest, GetEmojisResponse,
+    GetTopicRequest, GetTopicResponse, GetTopicsRequest, GetTopicsResponse, GetTopicsUsersRequest,
+    GetTopicsUsersResponse, GetUserTopicsRequest, GetUserTopicsResponse,
+    topics_service_server::TopicsService,
 };
 use tonic::{Request, Response, Status};
 
@@ -82,14 +83,23 @@ impl TopicsService for GrpcTopicsService {
 
         Ok(Response::new(DeleteTopicUserResponse::default()))
     }
+
+    async fn get_emojis(
+        &self,
+        _: Request<GetEmojisRequest>,
+    ) -> Result<Response<GetEmojisResponse>, Status> {
+        let res = get_emojis::handler(&self.state).await?;
+
+        Ok(Response::new(res))
+    }
 }
 
 mod create_topic {
     use bzd_messages_api::topics::{CreateTopicRequest, CreateTopicResponse};
-    use uuid::Uuid;
     use validator::Validate;
 
     use crate::app::{
+        current_user::CurrentUser,
         error::AppError,
         topics::{
             service::{
@@ -114,8 +124,8 @@ mod create_topic {
 
         fn try_from(req: CreateTopicRequest) -> Result<Self, Self::Error> {
             let data = Self {
-                user_id: Uuid::parse_str(req.user_id())?,
-                title: req.title().into(),
+                current_user: CurrentUser::new(&req.current_user_id)?,
+                title: emojis::get(req.title()).ok_or(AppError::Validation)?,
             };
 
             data.validate()?;
@@ -424,6 +434,41 @@ mod delete_topic_user {
                 current_user: CurrentUser::new(&req.current_user_id)?,
                 topic_user_id: req.topic_user_id().parse()?,
             })
+        }
+    }
+}
+
+mod get_emojis {
+    use bzd_messages_api::topics::{GetEmojisResponse, get_emojis_response::Emoji};
+
+    use crate::app::{
+        error::AppError,
+        topics::{
+            service::{self, get_emojis::Response},
+            state::TopicsState,
+        },
+    };
+
+    pub async fn handler(
+        TopicsState { settings, .. }: &TopicsState,
+    ) -> Result<GetEmojisResponse, AppError> {
+        let res = service::get_emojis(&settings)?;
+
+        Ok(res.into())
+    }
+
+    impl From<Response> for GetEmojisResponse {
+        fn from(res: Response) -> Self {
+            Self {
+                emojis: res
+                    .emojis
+                    .into_iter()
+                    .map(|emoji| Emoji {
+                        title: Some(emoji.to_string()),
+                        code: emoji.shortcode().map(|it| it.into()),
+                    })
+                    .collect(),
+            }
         }
     }
 }

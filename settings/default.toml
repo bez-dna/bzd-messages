@@ -15,11 +15,11 @@ consumer = "bzd-messages"
 user = 25
 message = 25
 
-[messages.events.message]
-subject = "bzd.messages.events.message"
+[messages.events.messages_topics]
+subject = "bzd.messages.events.messages_topics"
 
-[messages.events.message_topic]
-subject = "bzd.messages.events.message_topic"
+[topics.emojis]
+list = ["😂", "❤️", "😍", "🤣", "😊", "😭", "🙏", "😘", "👍", "😅"]
 
-[topics.events.topic_user]
-subject = "bzd.messages.events.topic_user"
+[topics.events.topics_users]
+subject = "bzd.messages.events.topics_users"

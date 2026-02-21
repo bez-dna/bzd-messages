@@ -8,6 +8,8 @@ service TopicsService {
     rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse);
     rpc GetUserTopics(GetUserTopicsRequest) returns (GetUserTopicsResponse);
 
+    rpc GetEmojis(GetEmojisRequest) returns (GetEmojisResponse);
+
     rpc GetTopicsUsers(GetTopicsUsersRequest) returns (GetTopicsUsersResponse);
     rpc CreateTopicUser(CreateTopicUserRequest)
         returns (CreateTopicUserResponse);
@@ -16,8 +18,8 @@ service TopicsService {
 }
 
 message CreateTopicRequest {
+    optional string current_user_id = 100;
     optional string title = 101;
-    optional string user_id = 102;
 }
 
 message CreateTopicResponse {
@@ -52,6 +54,17 @@ message GetUserTopicsRequest {
 
 message GetUserTopicsResponse {
     repeated string topic_ids = 101;
+}
+
+message GetEmojisRequest {}
+
+message GetEmojisResponse {
+    repeated Emoji emojis = 501;
+
+    message Emoji {
+        optional string title = 101;
+        optional string code = 102;
+    }
 }
 
 message GetTopicsUsersRequest {

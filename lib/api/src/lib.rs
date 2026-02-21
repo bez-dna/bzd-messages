@@ -16,37 +16,16 @@ pub mod events {
 
     tonic::include_proto!("bzd.messages.events");
 
-    pub mod message {
+    pub mod message_topic {
         use strum_macros::{Display, EnumString};
 
         #[derive(PartialEq, Debug, EnumString, Display, Clone)]
         #[strum(ascii_case_insensitive)]
         pub enum Type {
-            #[strum(serialize = "app.bezdna.message.created")]
+            #[strum(serialize = "app.bezdna.message-topic.created")]
             Created,
-            #[strum(serialize = "app.bezdna.message.updated")]
-            Updated,
-            #[strum(serialize = "app.bezdna.message.deleted")]
+            #[strum(serialize = "app.bezdna.message-topic.deleted")]
             Deleted,
-        }
-
-        #[cfg(test)]
-        mod tests {
-            use std::str::FromStr;
-
-            use bzd_lib::error::Error;
-
-            use crate::events::message::Type;
-
-            #[test]
-            fn test_parse_and_serialize() -> Result<(), Error> {
-                let tp = Type::from_str("app.bezdna.message.updated")?;
-                assert_eq!(Type::Updated, tp);
-
-                assert_eq!("app.bezdna.message.updated", tp.to_string());
-
-                Ok(())
-            }
         }
     }
 
@@ -58,8 +37,6 @@ pub mod events {
         pub enum Type {
             #[strum(serialize = "app.bezdna.topic-user.created")]
             Created,
-            #[strum(serialize = "app.bezdna.topic-user.updated")]
-            Updated,
             #[strum(serialize = "app.bezdna.topic-user.deleted")]
             Deleted,
         }

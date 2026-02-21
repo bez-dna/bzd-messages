@@ -15,22 +15,29 @@ pub async fn create_topic(
     db: &DbConn,
     req: create_topic::Request,
 ) -> Result<create_topic::Response, AppError> {
-    let topic = repo::create_topic(db, TopicModel::new(req.user_id, req.title)).await?;
+    let current_user = req.current_user.ok_or(AppError::Forbidden)?;
+    let code = req.title.shortcode().ok_or(AppError::Validation)?.into();
+
+    let topic = repo::create_topic(
+        db,
+        TopicModel::new(current_user.user_id, req.title.to_string(), code),
+    )
+    .await?;
 
     Ok(create_topic::Response { topic })
 }
 
 pub mod create_topic {
-    use uuid::Uuid;
+    use emojis::Emoji;
     use validator::Validate;
 
-    use crate::app::topics::repo::TopicModel;
+    use crate::app::{current_user::CurrentUser, topics::repo::TopicModel};
 
-    #[derive(Validate)]
+    #[derive(Validate, Debug)]
     pub struct Request {
-        pub user_id: Uuid,
-        #[validate(length(min = 2))]
-        pub title: String,
+        pub current_user: Option<CurrentUser>,
+        // #[validate(length(min = 2))]
+        pub title: &'static Emoji,
     }
 
     pub struct Response {
@@ -198,6 +205,10 @@ pub async fn create_topic_user(
 
     let topic = repo::get_topic_by_id(db, req.topic_id).await?;
 
+    if topic.user_id == current_user.user_id {
+        return Err(AppError::Forbidden);
+    }
+
     let topic_user = repo::create_topic_user(
         db,
         TopicUserModel::new(current_user.user_id, topic.topic_id),
@@ -271,5 +282,25 @@ pub mod delete_topic_user {
     pub struct Request {
         pub current_user: Option<CurrentUser>,
         pub topic_user_id: Uuid,
+    }
+}
+
+pub fn get_emojis(settings: &TopicsSettings) -> Result<get_emojis::Response, AppError> {
+    // очевидно что нужно убрать отсюда ресолв конфиги на каждый запрос
+    let emojis = settings
+        .emojis
+        .list
+        .iter()
+        .map(|it| emojis::get(it).ok_or(AppError::Unreachable))
+        .collect::<Result<_, _>>()?;
+
+    Ok(get_emojis::Response { emojis })
+}
+
+pub mod get_emojis {
+    use emojis::Emoji;
+
+    pub struct Response {
+        pub emojis: Vec<&'static Emoji>,
     }
 }

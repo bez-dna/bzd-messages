@@ -9,6 +9,7 @@ mod m20250914_122217_create_messages_streams;
 mod m20250914_122723_create_messages_topics;
 mod m20251027_072804_create_topics_users;
 mod m20260127_142240_create_messages_users;
+mod m20260221_073831_add_code_to_topics;
 
 pub struct Migrator;
 
@@ -23,6 +24,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20250914_122723_create_messages_topics::Migration),
             Box::new(m20251027_072804_create_topics_users::Migration),
             Box::new(m20260127_142240_create_messages_users::Migration),
+            Box::new(m20260221_073831_add_code_to_topics::Migration),
         ]
     }
 }
