@@ -18,5 +18,8 @@ message = 25
 [messages.events.messages_topics]
 subject = "bzd.messages.events.messages_topics"
 
+[topics.emojis]
+list = ["😂", "❤️", "😍", "🤣", "😊", "😭", "🙏", "😘", "👍", "😅"]
+
 [topics.events.topics_users]
 subject = "bzd.messages.events.topics_users"

@@ -2,7 +2,7 @@ use uuid::Uuid;
 
 use crate::app::error::AppError;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct CurrentUser {
     pub user_id: Uuid,
 }

@@ -5,6 +5,7 @@ pub enum Topics {
     Table,
     TopicId,
     Title,
+    Code,
     UserId,
 }
 
