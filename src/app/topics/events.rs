@@ -29,9 +29,7 @@ pub async fn topic_user(
 }
 
 mod topic_user {
-    use prost_types::Timestamp;
-
-    use crate::app::topics::repo::TopicUserModel;
+    use crate::app::{grpc::ToProtoTimestamp as _, topics::repo::TopicUserModel};
 
     impl From<&TopicUserModel> for bzd_messages_api::events::TopicUser {
         fn from(topic_user: &TopicUserModel) -> Self {
@@ -39,14 +37,8 @@ mod topic_user {
                 topic_user_id: Some(topic_user.topic_user_id.into()),
                 user_id: Some(topic_user.user_id.into()),
                 topic_id: Some(topic_user.topic_id.into()),
-                created_at: Some(Timestamp {
-                    seconds: topic_user.created_at.and_utc().timestamp(),
-                    nanos: 0,
-                }),
-                updated_at: Some(Timestamp {
-                    seconds: topic_user.updated_at.and_utc().timestamp(),
-                    nanos: 0,
-                }),
+                created_at: topic_user.created_at.to_option_proto(),
+                updated_at: topic_user.updated_at.to_option_proto(),
             }
         }
     }
