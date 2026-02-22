@@ -167,26 +167,25 @@ pub mod get_user_topics {
     }
 }
 
-pub async fn get_topics_users(
+pub async fn get_user_topics_users(
     db: &DbConn,
-    req: get_topics_users::Request,
-) -> Result<get_topics_users::Response, AppError> {
+    req: get_user_topics_users::Request,
+) -> Result<get_user_topics_users::Response, AppError> {
     let topics_users = if let Some(user_id) = req.user_id {
-        repo::get_topics_users_by_ids_and_user_id(db, req.topic_ids, user_id).await?
+        repo::get_topics_users_by_user_id(db, user_id).await?
     } else {
         vec![]
     };
 
-    Ok(get_topics_users::Response { topics_users })
+    Ok(get_user_topics_users::Response { topics_users })
 }
 
-pub mod get_topics_users {
+pub mod get_user_topics_users {
     use uuid::Uuid;
 
     use crate::app::topics::repo::TopicUserModel;
 
     pub struct Request {
-        pub topic_ids: Vec<Uuid>,
         pub user_id: Option<Uuid>,
     }
 

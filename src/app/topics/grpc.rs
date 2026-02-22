@@ -1,8 +1,8 @@
 use bzd_messages_api::topics::{
     CreateTopicRequest, CreateTopicResponse, CreateTopicUserRequest, CreateTopicUserResponse,
     DeleteTopicUserRequest, DeleteTopicUserResponse, GetEmojisRequest, GetEmojisResponse,
-    GetTopicRequest, GetTopicResponse, GetTopicsRequest, GetTopicsResponse, GetTopicsUsersRequest,
-    GetTopicsUsersResponse, GetUserTopicsRequest, GetUserTopicsResponse,
+    GetTopicRequest, GetTopicResponse, GetTopicsRequest, GetTopicsResponse, GetUserTopicsRequest,
+    GetUserTopicsResponse, GetUserTopicsUsersRequest, GetUserTopicsUsersResponse,
     topics_service_server::TopicsService,
 };
 use tonic::{Request, Response, Status};
@@ -57,11 +57,11 @@ impl TopicsService for GrpcTopicsService {
         Ok(Response::new(res))
     }
 
-    async fn get_topics_users(
+    async fn get_user_topics_users(
         &self,
-        req: Request<GetTopicsUsersRequest>,
-    ) -> Result<Response<GetTopicsUsersResponse>, Status> {
-        let res = get_topics_users::handler(&self.state, req.into_inner()).await?;
+        req: Request<GetUserTopicsUsersRequest>,
+    ) -> Result<Response<GetUserTopicsUsersResponse>, Status> {
+        let res = get_user_topics_users::handler(&self.state, req.into_inner()).await?;
 
         Ok(Response::new(res))
     }
@@ -289,9 +289,9 @@ mod get_user_topics {
     }
 }
 
-mod get_topics_users {
+mod get_user_topics_users {
     use bzd_messages_api::topics::{
-        GetTopicsUsersRequest, GetTopicsUsersResponse, get_topics_users_response,
+        GetUserTopicsUsersRequest, GetUserTopicsUsersResponse, get_user_topics_users_response,
     };
     use uuid::Uuid;
 
@@ -301,7 +301,7 @@ mod get_topics_users {
             repo::TopicUserModel,
             service::{
                 self,
-                get_topics_users::{Request, Response},
+                get_user_topics_users::{Request, Response},
             },
             state::TopicsState,
         },
@@ -309,25 +309,18 @@ mod get_topics_users {
 
     pub async fn handler(
         TopicsState { db, .. }: &TopicsState,
-        req: GetTopicsUsersRequest,
-    ) -> Result<GetTopicsUsersResponse, AppError> {
-        let res = service::get_topics_users(&db.conn, req.try_into()?).await?;
+        req: GetUserTopicsUsersRequest,
+    ) -> Result<GetUserTopicsUsersResponse, AppError> {
+        let res = service::get_user_topics_users(&db.conn, req.try_into()?).await?;
 
         Ok(res.into())
     }
 
-    impl TryFrom<GetTopicsUsersRequest> for Request {
+    impl TryFrom<GetUserTopicsUsersRequest> for Request {
         type Error = AppError;
 
-        fn try_from(req: GetTopicsUsersRequest) -> Result<Self, Self::Error> {
-            let topic_ids = req
-                .topic_ids
-                .iter()
-                .map(|it| it.parse())
-                .collect::<Result<Vec<Uuid>, _>>()?;
-
+        fn try_from(req: GetUserTopicsUsersRequest) -> Result<Self, Self::Error> {
             Ok(Self {
-                topic_ids,
                 user_id: req
                     .current_user_id
                     .as_deref()
@@ -337,7 +330,7 @@ mod get_topics_users {
         }
     }
 
-    impl From<Response> for GetTopicsUsersResponse {
+    impl From<Response> for GetUserTopicsUsersResponse {
         fn from(res: Response) -> Self {
             Self {
                 topics_users: res.topics_users.iter().map(Into::into).collect(),
@@ -345,7 +338,7 @@ mod get_topics_users {
         }
     }
 
-    impl From<&TopicUserModel> for get_topics_users_response::TopicUser {
+    impl From<&TopicUserModel> for get_user_topics_users_response::TopicUser {
         fn from(topic_user: &TopicUserModel) -> Self {
             Self {
                 topic_user_id: Some(topic_user.topic_user_id.into()),
