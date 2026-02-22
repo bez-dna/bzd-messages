@@ -2,12 +2,12 @@ use bzd_messages_api::topics::{
     CreateTopicRequest, CreateTopicResponse, CreateTopicUserRequest, CreateTopicUserResponse,
     DeleteTopicUserRequest, DeleteTopicUserResponse, GetEmojisRequest, GetEmojisResponse,
     GetTopicRequest, GetTopicResponse, GetTopicsRequest, GetTopicsResponse, GetUserTopicsRequest,
-    GetUserTopicsResponse, GetUserTopicsUsersRequest, GetUserTopicsUsersResponse,
+    GetUserTopicsResponse, GetUserTopicsUsersRequest, GetUserTopicsUsersResponse, Topic,
     topics_service_server::TopicsService,
 };
 use tonic::{Request, Response, Status};
 
-use crate::app::topics::state::TopicsState;
+use crate::app::topics::{repo::TopicModel, state::TopicsState};
 
 pub struct GrpcTopicsService {
     pub state: TopicsState,
@@ -144,13 +144,12 @@ mod create_topic {
 }
 
 mod get_topics {
-    use bzd_messages_api::topics::{GetTopicsRequest, GetTopicsResponse, Topic};
+    use bzd_messages_api::topics::{GetTopicsRequest, GetTopicsResponse};
     use uuid::Uuid;
 
     use crate::app::{
         error::AppError,
         topics::{
-            repo::TopicModel,
             service::{
                 self,
                 get_topics::{Request, Response},
@@ -189,20 +188,10 @@ mod get_topics {
             }
         }
     }
-
-    impl From<TopicModel> for Topic {
-        fn from(topic: TopicModel) -> Self {
-            Self {
-                topic_id: Some(topic.topic_id.into()),
-                title: topic.title.into(),
-                user_id: Some(topic.user_id.into()),
-            }
-        }
-    }
 }
 
 mod get_topic {
-    use bzd_messages_api::topics::{GetTopicRequest, GetTopicResponse, Topic};
+    use bzd_messages_api::topics::{GetTopicRequest, GetTopicResponse};
     use uuid::Uuid;
 
     use crate::app::{
@@ -237,11 +226,7 @@ mod get_topic {
     impl From<get_topic::Response> for GetTopicResponse {
         fn from(res: get_topic::Response) -> Self {
             Self {
-                topic: Some(Topic {
-                    topic_id: Some(res.topic.topic_id.into()),
-                    title: res.topic.title.into(),
-                    user_id: Some(res.topic.user_id.into()),
-                }),
+                topic: Some(res.topic.into()),
             }
         }
     }
@@ -284,6 +269,7 @@ mod get_user_topics {
         fn from(res: Response) -> Self {
             Self {
                 topic_ids: res.topics.iter().map(|it| it.topic_id.into()).collect(),
+                topics: res.topics.into_iter().map(Into::into).collect(),
             }
         }
     }
@@ -462,6 +448,16 @@ mod get_emojis {
                     })
                     .collect(),
             }
+        }
+    }
+}
+
+impl From<TopicModel> for Topic {
+    fn from(topic: TopicModel) -> Self {
+        Self {
+            topic_id: Some(topic.topic_id.into()),
+            title: topic.title.into(),
+            user_id: Some(topic.user_id.into()),
         }
     }
 }

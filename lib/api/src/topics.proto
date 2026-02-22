@@ -55,6 +55,7 @@ message GetUserTopicsRequest {
 
 message GetUserTopicsResponse {
     repeated string topic_ids = 101;
+    repeated Topic topics = 501;
 }
 
 message GetEmojisRequest {}
