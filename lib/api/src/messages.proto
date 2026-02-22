@@ -52,7 +52,6 @@ message GetMessagesResponse {
 }
 
 message GetMessageRequest {
-    optional string current_user_id = 100;
     optional string message_id = 101;
 }
 
@@ -65,14 +64,8 @@ message GetMessageResponse {
         optional string user_id = 103;
         optional string code = 104;
 
-        optional Permissions permissions = 801;
-
         optional google.protobuf.Timestamp created_at = 901;
         optional google.protobuf.Timestamp updated_at = 902;
-    }
-
-    message Permissions {
-        optional bool topics = 101;
     }
 }
 
