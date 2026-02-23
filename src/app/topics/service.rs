@@ -16,11 +16,11 @@ pub async fn create_topic(
     req: create_topic::Request,
 ) -> Result<create_topic::Response, AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
-    let code = req.title.shortcode().ok_or(AppError::Validation)?.into();
+    let code = req.emoji.shortcode().ok_or(AppError::Validation)?.into();
 
     let topic = repo::create_topic(
         db,
-        TopicModel::new(current_user.user_id, req.title.to_string(), code),
+        TopicModel::new(current_user.user_id, req.emoji.to_string(), code),
     )
     .await?;
 
@@ -29,15 +29,11 @@ pub async fn create_topic(
 
 pub mod create_topic {
     use emojis::Emoji;
-    use validator::Validate;
 
     use crate::app::{current_user::CurrentUser, topics::repo::TopicModel};
-
-    #[derive(Validate, Debug)]
     pub struct Request {
         pub current_user: Option<CurrentUser>,
-        // #[validate(length(min = 2))]
-        pub title: &'static Emoji,
+        pub emoji: &'static Emoji,
     }
 
     pub struct Response {
@@ -167,26 +163,25 @@ pub mod get_user_topics {
     }
 }
 
-pub async fn get_topics_users(
+pub async fn get_user_topics_users(
     db: &DbConn,
-    req: get_topics_users::Request,
-) -> Result<get_topics_users::Response, AppError> {
+    req: get_user_topics_users::Request,
+) -> Result<get_user_topics_users::Response, AppError> {
     let topics_users = if let Some(user_id) = req.user_id {
-        repo::get_topics_users_by_ids_and_user_id(db, req.topic_ids, user_id).await?
+        repo::get_topics_users_by_user_id(db, user_id).await?
     } else {
         vec![]
     };
 
-    Ok(get_topics_users::Response { topics_users })
+    Ok(get_user_topics_users::Response { topics_users })
 }
 
-pub mod get_topics_users {
+pub mod get_user_topics_users {
     use uuid::Uuid;
 
     use crate::app::topics::repo::TopicUserModel;
 
     pub struct Request {
-        pub topic_ids: Vec<Uuid>,
         pub user_id: Option<Uuid>,
     }
 

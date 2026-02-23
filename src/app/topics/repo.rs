@@ -63,13 +63,11 @@ pub async fn get_topics_by_ids<T: ConnectionTrait>(
     Ok(topics)
 }
 
-pub async fn get_topics_users_by_ids_and_user_id<T: ConnectionTrait>(
+pub async fn get_topics_users_by_user_id<T: ConnectionTrait>(
     db: &T,
-    topic_ids: Vec<Uuid>,
     user_id: Uuid,
 ) -> Result<Vec<TopicUserModel>, AppError> {
     let topics = topic_user::Entity::find()
-        .filter(topic_user::Column::TopicId.is_in(topic_ids))
         .filter(topic_user::Column::UserId.eq(user_id))
         .all(db)
         .await?;

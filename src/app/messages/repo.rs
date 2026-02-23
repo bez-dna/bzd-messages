@@ -221,12 +221,26 @@ pub async fn get_topic_by_id<T: ConnectionTrait>(
     Ok(topic)
 }
 
-pub async fn get_messages_topics_by_message_ids<T: ConnectionTrait>(
+pub async fn get_topics_by_user_id<T: ConnectionTrait>(
+    db: &T,
+    user_id: Uuid,
+) -> Result<Vec<TopicModel>, AppError> {
+    let topics = topic::Entity::find()
+        .filter(topic::Column::UserId.eq(user_id))
+        .all(db)
+        .await?;
+
+    Ok(topics)
+}
+
+pub async fn get_messages_topics_by_message_ids_and_topics_ids<T: ConnectionTrait>(
     db: &T,
     message_ids: Vec<Uuid>,
+    topic_ids: Vec<Uuid>,
 ) -> Result<Vec<MessageTopicModel>, AppError> {
     let messages_topics = message_topic::Entity::find()
         .filter(message_topic::Column::MessageId.is_in(message_ids))
+        .filter(message_topic::Column::TopicId.is_in(topic_ids))
         .all(db)
         .await?;
 
