@@ -96,7 +96,6 @@ impl TopicsService for GrpcTopicsService {
 
 mod create_topic {
     use bzd_messages_api::topics::{CreateTopicRequest, CreateTopicResponse};
-    use validator::Validate;
 
     use crate::app::{
         current_user::CurrentUser,
@@ -125,10 +124,8 @@ mod create_topic {
         fn try_from(req: CreateTopicRequest) -> Result<Self, Self::Error> {
             let data = Self {
                 current_user: CurrentUser::new(&req.current_user_id)?,
-                title: emojis::get(req.title()).ok_or(AppError::Validation)?,
+                emoji: emojis::get(req.title()).ok_or(AppError::Validation)?,
             };
-
-            data.validate()?;
 
             Ok(data)
         }

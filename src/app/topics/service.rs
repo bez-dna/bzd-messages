@@ -16,11 +16,11 @@ pub async fn create_topic(
     req: create_topic::Request,
 ) -> Result<create_topic::Response, AppError> {
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
-    let code = req.title.shortcode().ok_or(AppError::Validation)?.into();
+    let code = req.emoji.shortcode().ok_or(AppError::Validation)?.into();
 
     let topic = repo::create_topic(
         db,
-        TopicModel::new(current_user.user_id, req.title.to_string(), code),
+        TopicModel::new(current_user.user_id, req.emoji.to_string(), code),
     )
     .await?;
 
@@ -29,15 +29,11 @@ pub async fn create_topic(
 
 pub mod create_topic {
     use emojis::Emoji;
-    use validator::Validate;
 
     use crate::app::{current_user::CurrentUser, topics::repo::TopicModel};
-
-    #[derive(Validate, Debug)]
     pub struct Request {
         pub current_user: Option<CurrentUser>,
-        // #[validate(length(min = 2))]
-        pub title: &'static Emoji,
+        pub emoji: &'static Emoji,
     }
 
     pub struct Response {

@@ -281,21 +281,30 @@ pub mod get_messages_users {
     }
 }
 
-pub async fn get_messages_topics(
+pub async fn get_user_messages_topics(
     db: &DbConn,
-    req: get_messages_topics::Request,
-) -> Result<get_messages_topics::Response, AppError> {
-    let messages_topics = repo::get_messages_topics_by_message_ids(db, req.message_ids).await?;
+    req: get_user_messages_topics::Request,
+) -> Result<get_user_messages_topics::Response, AppError> {
+    let topic_ids = repo::get_topics_by_user_id(db, req.user_id)
+        .await?
+        .iter()
+        .map(|it| it.topic_id)
+        .collect();
 
-    Ok(get_messages_topics::Response { messages_topics })
+    let messages_topics =
+        repo::get_messages_topics_by_message_ids_and_topics_ids(db, req.message_ids, topic_ids)
+            .await?;
+
+    Ok(get_user_messages_topics::Response { messages_topics })
 }
 
-pub mod get_messages_topics {
+pub mod get_user_messages_topics {
     use uuid::Uuid;
 
     use crate::app::messages::repo::MessageTopicModel;
 
     pub struct Request {
+        pub user_id: Uuid,
         pub message_ids: Vec<Uuid>,
     }
 
@@ -313,16 +322,19 @@ pub async fn create_message_topic(
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
 
     let message = repo::get_message_by_id(db, req.message_id).await?;
-    current_user.check_access(message.user_id)?;
 
     let topic = repo::get_topic_by_id(db, req.topic_id).await?;
     current_user.check_access(topic.user_id)?;
 
+    let tx = db.begin().await?;
+
     let message_topic = repo::create_message_topic(
-        db,
+        &tx,
         MessageTopicModel::new(message.message_id, topic.topic_id),
     )
     .await?;
+
+    tx.commit().await?;
 
     events::message_topic(js, &settings.events, &message_topic, Type::Created).await?;
 
@@ -356,8 +368,8 @@ pub async fn delete_message_topic(
     let current_user = req.current_user.ok_or(AppError::Forbidden)?;
 
     let message_topic = repo::get_message_topic_by_id(db, req.message_topic_id).await?;
-    let message = repo::get_message_by_id(db, message_topic.message_id).await?;
-    current_user.check_access(message.user_id)?;
+    let topic = repo::get_topic_by_id(db, message_topic.topic_id).await?;
+    current_user.check_access(topic.user_id)?;
 
     repo::delete_message_topic(db, message_topic.clone()).await?;
 
