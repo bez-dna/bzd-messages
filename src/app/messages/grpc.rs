@@ -172,11 +172,11 @@ mod get_messages {
     use bzd_messages_api::messages::{
         GetMessagesRequest, GetMessagesResponse, get_messages_response,
     };
-    use prost_types::Timestamp;
     use uuid::Uuid;
 
     use crate::app::{
         error::AppError,
+        grpc::ToProtoTimestamp,
         messages::{
             repo::message,
             service::{
@@ -225,14 +225,9 @@ mod get_messages {
                 text: message.text.clone().into(),
                 user_id: Some(message.user_id.into()),
                 code: message.code.clone().into(),
-                created_at: Some(Timestamp {
-                    seconds: message.created_at.and_utc().timestamp(),
-                    nanos: 0,
-                }),
-                updated_at: Some(Timestamp {
-                    seconds: message.updated_at.and_utc().timestamp(),
-                    nanos: 0,
-                }),
+                order: Some(message.created_at.and_utc().timestamp_micros()),
+                created_at: message.created_at.to_option_proto(),
+                updated_at: message.updated_at.to_option_proto(),
             }
         }
     }
@@ -285,6 +280,7 @@ mod get_message {
                     text: message.text.clone().into(),
                     user_id: Some(message.user_id.into()),
                     code: message.code.clone().into(),
+                    order: Some(message.created_at.and_utc().timestamp_micros()),
                     created_at: message.created_at.to_option_proto(),
                     updated_at: message.updated_at.to_option_proto(),
                 }),
